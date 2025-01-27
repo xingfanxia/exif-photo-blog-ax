@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { TIMEZONE_COOKIE_NAME } from '@/utility/timezone';
 import { getOutdatedPhotosCount } from '@/photo/db/query';
-import { PRESERVE_ORIGINAL_UPLOADS } from '@/app/config';
+import { PRESERVE_ORIGINAL_UPLOADS, AI_TEXT_GENERATION_ENABLED } from '@/app/config';
 
 export const maxDuration = 60;
 
@@ -54,6 +54,7 @@ export default async function AdminPhotosPage() {
       infiniteScrollInitial: INFINITE_SCROLL_INITIAL_ADMIN_PHOTOS,
       infiniteScrollMultiple: INFINITE_SCROLL_MULTIPLE_ADMIN_PHOTOS,
       timezone,
+      hasAiTextGeneration: AI_TEXT_GENERATION_ENABLED,
     }} />
   );
 }
