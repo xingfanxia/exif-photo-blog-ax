@@ -42,18 +42,27 @@ export type AiImageQuery =
   'description-large' |
   'description-semantic';
 
-export const PHOTO_GENRES = ['portrait', 'street', 'landscape', 'events'] as const;
+export const PHOTO_GENRES = ['portrait photography', 'landscape photography', 'animal photography', 'street photography', 'event photography'] as const;
 export type PhotoGenre = typeof PHOTO_GENRES[number];
 
+// Fixed mapping of genres to their Chinese translations
+export const GENRE_TRANSLATIONS: Record<PhotoGenre, string> = {
+  'portrait photography': '人像摄影',
+  'landscape photography': '风光摄影',
+  'animal photography': '动物摄影',
+  'street photography': '街拍摄影',
+  'event photography': '活动摄影',
+};
+
 export const AI_IMAGE_QUERIES: Record<AiImageQuery, string> = {
-  'title': 'Write a poetic and emotionally evocative title for this image in both English and Chinese. Focus on the mood, atmosphere, and feelings the image evokes. Format: "English Title | 中文标题". Keep each title within 5 words.',
-  'caption': 'Write a poetic and emotionally resonant caption for this image in both English and Chinese. Focus on the mood, atmosphere, and feelings. Format: "English Caption | 中文说明". Keep each caption within 8 words.',
-  'title-and-caption': 'Write a poetic title and caption for this image in both English and Chinese. Focus on the mood, atmosphere, and feelings. Format: Title: "English Title | 中文标题" Caption: "English Caption | 中文说明". Keep titles within 5 words and captions within 8 words.',
-  'tags': 'First, identify which one of these genres best fits this image: portrait, street, landscape, events. Then, generate a comma-separated list of 10 tags, mixing English and Chinese naturally. Start with the identified genre, then add more specific descriptive tags. Example: "street, 街头, night market, 夜市, neon lights, 霓虹灯, crowd, 人群, urban life, 城市生活"',
-  'description-small': 'Describe this image succinctly without the initial text "This image shows" or "This is a picture of"',
-  'description': 'Describe this image',
-  'description-large': 'Describe this image in detail',
-  'description-semantic': 'List up to 5 things in this image without description as a comma-separated list',
+  'title': 'You are a creative bilingual poet and photography curator. Create a unique and imaginative title for this image in both English and Chinese. Be bold and experimental - consider metaphors, emotions, abstract concepts, or sensory experiences. Avoid generic descriptions. Each time, try a completely different style or perspective. Format: "English Title | 中文标题". Keep each title within 5-6 words. The title should capture the essence, mood, or story of the image in an unexpected way.',
+  'caption': 'As a photography curator, craft an artistic bilingual caption that captures the visual essence and photographic qualities of this scene. Focus on light, composition, mood, colors, or textures. Be creative with your language but stay focused on the photographic elements. Format: "English Caption | 中文说明". Keep each caption within 8 words but make them impactful.',
+  'title-and-caption': 'You are a creative bilingual poet and photography curator. First, create a unique and imaginative title in both languages - be bold and experimental, using metaphors, emotions, or abstract concepts. Avoid generic descriptions. Then write a complementary poetic caption that expands on the title\'s theme. Format: Title: "English Title | 中文标题" Caption: "English Caption | 中文说明". Keep titles within 5-6 words and captions within 8 words.',
+  'tags': `First, identify which ONE genre best describes this image from ONLY these options: portrait photography (人像摄影), landscape photography (风光摄影), animal photography (动物摄影), street photography (街拍摄影), event photography (活动摄影). Then generate exactly 10 tags in this strict format: first 5 tags in English (starting with the genre), followed by 5 tags in Chinese (starting with the genre's exact translation as provided). Focus on visual elements, mood, lighting, environment, and atmosphere. Do not describe or identify any people. Format your response as a simple comma-separated list. Example for a landscape photo: "landscape photography, mountains, sunlight, morning, misty, 风光摄影, 山脉, 阳光, 早晨, 薄雾"`,
+  'description-small': 'Write a concise yet vivid description focusing on the key visual elements, mood, and atmosphere. Start directly with active, descriptive language. Focus on what makes this image unique or striking. Avoid generic phrases like "This image shows" or "This is a picture of".',
+  'description': 'Write a balanced description that covers composition, lighting, mood, and subject matter. Include notable technical aspects like depth of field, color palette, or framing. Describe the overall visual impact and any interesting details that contribute to the image\'s story.',
+  'description-large': 'Provide a comprehensive analysis of the image covering: 1) Technical aspects (composition, lighting, color, focus), 2) Subject matter and visual elements, 3) Mood and atmosphere, 4) Artistic choices and their impact, 5) Notable details and their contribution to the overall image. Use specific photography terminology where relevant.',
+  'description-semantic': 'List exactly 5 key elements or subjects in this image as a comma-separated list. Focus on concrete, visually distinct elements that define the scene. List them in order of visual prominence. Be specific but concise, using precise nouns without additional description.',
 };
 
 export const parseTitleAndCaption = (text: string) => {

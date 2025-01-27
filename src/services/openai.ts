@@ -88,6 +88,19 @@ export const streamOpenAiImageQuery = async (
   return stream.value;
 };
 
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 1000;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const isContentFilterResponse = (text: string) => {
+  const lowerText = text.toLowerCase();
+  return lowerText.includes("i'm sorry") || 
+         lowerText.includes("i apologize") || 
+         lowerText.includes("cannot help") ||
+         lowerText.includes("can't help");
+};
+
 export const generateOpenAiImageQuery = async (
   imageBase64: string,
   query: string,
@@ -97,8 +110,35 @@ export const generateOpenAiImageQuery = async (
   const args = getImageTextArgs(imageBase64, query);
 
   if (args) {
-    return generateText(args)
-      .then(({ text }) => cleanUpAiTextResponse(text));
+    let lastError: Error | undefined;
+    
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const { text } = await generateText(args);
+        const cleanedText = cleanUpAiTextResponse(text);
+        
+        // If we get a content filter response, treat it as an error and retry
+        if (isContentFilterResponse(cleanedText)) {
+          lastError = new Error('Content filter response');
+          if (attempt < MAX_RETRIES - 1) {
+            await sleep(RETRY_DELAY_MS);
+            continue;
+          }
+        }
+        
+        return cleanedText;
+      } catch (e) {
+        lastError = e as Error;
+        if (attempt < MAX_RETRIES - 1) {
+          await sleep(RETRY_DELAY_MS);
+          continue;
+        }
+      }
+    }
+    
+    // If we get here, all retries failed
+    console.error(`Failed to generate text after ${MAX_RETRIES} attempts:`, lastError);
+    throw lastError;
   }
 };
 
