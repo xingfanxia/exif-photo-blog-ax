@@ -42,16 +42,7 @@ export default function AiButton({
     <LoaderButton
       icon={<HiSparkles size={16} />}
       className={className}
-      onClick={e => {
-        if (
-          !shouldConfirm ||
-          confirm('Are you sure you want to overwrite existing content?')
-        ) {
-          aiContent.request(requestFields);
-        } else {
-          e.preventDefault();
-        }
-      }}
+      onClick={() => aiContent.request(requestFields)}
       isLoading={isLoading}
     />
   );

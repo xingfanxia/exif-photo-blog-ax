@@ -6,10 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { TIMEZONE_COOKIE_NAME } from '@/utility/timezone';
 import { getOutdatedPhotosCount } from '@/photo/db/query';
-import {
-  AI_TEXT_GENERATION_ENABLED,
-  PRESERVE_ORIGINAL_UPLOADS,
-} from '@/app/config';
+import { PRESERVE_ORIGINAL_UPLOADS, AI_TEXT_GENERATION_ENABLED } from '@/app/config';
 
 export const maxDuration = 60;
 

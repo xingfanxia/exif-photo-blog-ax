@@ -44,10 +44,16 @@ export const getNextImageUrlForRequest = ({
 // generating blur data or image thumbnails for AI text generation
 export const getNextImageUrlForManipulation = (
   imageUrl: string,
-  addBypassSecret: boolean,
-) =>
-  getNextImageUrlForRequest({
+  addBypassSecret = false,
+) => {
+  // In development, bypass Next.js image optimization to avoid issues with Sharp
+  if (process.env.NODE_ENV === 'development') {
+    return imageUrl;
+  }
+  return getNextImageUrlForRequest({
     imageUrl,
     size: 640,
+    quality: 90,
     addBypassSecret,
   });
+};
