@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { streamAiImageQueryAction } from '../actions';
-import { readStreamableValue } from 'ai/rsc';
+import { readStreamableValue, StreamableValue } from 'ai/rsc';
 import { AiImageQuery } from '.';
 
 export default function useAiImageQuery(
@@ -19,9 +19,11 @@ export default function useAiImageQuery(
         const textStream = await streamAiImageQueryAction(
           imageBase64,
           query,
-        );
-        for await (const text of readStreamableValue(textStream)) {
-          setText(current => `${current}${text ?? ''}`);
+        ) as StreamableValue<string>;
+        if (textStream) {
+          for await (const chunk of readStreamableValue(textStream)) {
+            setText(current => `${current}${chunk ?? ''}`);
+          }
         }
         setIsLoading(false);
       } catch (e) {

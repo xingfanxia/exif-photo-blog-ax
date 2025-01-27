@@ -395,7 +395,7 @@ export const streamAiImageQueryAction = async (
   query: AiImageQuery,
 ) =>
   runAuthenticatedAdminServerAction(() =>
-    streamOpenAiImageQuery(imageBase64, AI_IMAGE_QUERIES[query]));
+    streamOpenAiImageQuery(imageBase64, query));
 
 export const getImageBlurAction = async (url: string) =>
   runAuthenticatedAdminServerAction(() => blurImageFromUrl(url));

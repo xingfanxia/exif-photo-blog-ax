@@ -43,10 +43,7 @@ describe('AI Image Analysis', () => {
       });
       console.log('Testing parseBilingualResponse with input:', input);
       const result = parseBilingualResponse(input);
-      expect(result).toEqual({
-        english: 'Autumn Whispers',
-        chinese: '秋语'
-      });
+      expect(result).toBe('Autumn Whispers | 秋语');
     });
 
     test('parseBilingualResponse handles invalid input', () => {
@@ -56,10 +53,7 @@ describe('AI Image Analysis', () => {
       });
       console.log('Testing parseBilingualResponse with invalid input:', input);
       const result = parseBilingualResponse(input);
-      expect(result).toEqual({
-        english: input,
-        chinese: ''
-      });
+      expect(result).toBe(input);
     });
 
     test('parseTitleAndCaption handles valid input', () => {
@@ -99,16 +93,14 @@ describe('AI Image Analysis', () => {
       });
       console.log('Testing parseTags with input:', input);
       const result = parseTags(input);
-      expect(result).toContain('landscape');
-      expect(result).toContain('mountains');
-      expect(result).toContain('山脉');
+      expect(result).toBe('landscape,mountains,sunrise,mist,山脉,日出,云雾');
     });
 
     test('parseTags handles invalid input', () => {
       const input = 'invalid json';
       console.log('Testing parseTags with invalid input:', input);
       const result = parseTags(input);
-      expect(result).toEqual([]);
+      expect(result).toBe('');
     });
 
     test('parseTags validates genre', () => {
@@ -119,7 +111,7 @@ describe('AI Image Analysis', () => {
       });
       console.log('Testing parseTags with invalid genre:', input);
       const result = parseTags(input);
-      expect(result).toEqual([]);
+      expect(result).toBe('');
     });
   });
 
@@ -129,13 +121,11 @@ describe('AI Image Analysis', () => {
       console.log('Testing AI generation result:', result);
       expect(result.title).toBeDefined();
       if (result.title) {
-        expect(result.title.english).toBe('Ephemeral Beauty');
-        expect(result.title.chinese).toBe('瞬逝之美');
+        expect(result.title).toBe('Ephemeral Beauty | 瞬逝之美');
       }
       expect(result.caption).toBeDefined();
       if (result.caption) {
-        expect(result.caption.english).toBe('Roses bask in fleeting sunlight');
-        expect(result.caption.chinese).toBe('玫瑰沐浴在转瞬即逝的阳光中');
+        expect(result.caption).toBe('Roses bask in fleeting sunlight | 玫瑰沐浴在转瞬即逝的阳光中');
       }
       expect(result.error).toBeUndefined();
     });

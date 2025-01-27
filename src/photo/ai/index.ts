@@ -190,7 +190,7 @@ const validateTags = (response: TagsResponse): boolean => {
   return true;
 };
 
-export const parseBilingualResponse = (jsonStr: string): BilingualResponse => {
+export const parseBilingualResponse = (jsonStr: string): string => {
   try {
     console.log('Parsing bilingual response, input:', jsonStr);
     const response = JSON.parse(jsonStr) as BilingualResponse;
@@ -206,15 +206,15 @@ export const parseBilingualResponse = (jsonStr: string): BilingualResponse => {
       throw new Error('Invalid bilingual response format');
     }
 
-    return result;
+    return `${result.english} | ${result.chinese}`;
   } catch (e) {
     console.error('Failed to parse bilingual response:', e);
     console.error('Original input:', jsonStr);
-    return { english: jsonStr, chinese: '' };
+    return jsonStr;
   }
 };
 
-export const parseTitleAndCaption = (jsonStr: string): TitleAndCaptionResponse => {
+export const parseTitleAndCaption = (jsonStr: string): { title: string, caption: string } => {
   try {
     console.log('Parsing title and caption, input:', jsonStr);
     const response = JSON.parse(jsonStr) as TitleAndCaptionResponse;
@@ -236,18 +236,21 @@ export const parseTitleAndCaption = (jsonStr: string): TitleAndCaptionResponse =
       throw new Error('Invalid title and caption format');
     }
 
-    return result;
+    return {
+      title: `${result.title.english} | ${result.title.chinese}`,
+      caption: `${result.caption.english} | ${result.caption.chinese}`
+    };
   } catch (e) {
     console.error('Failed to parse title and caption:', e);
     console.error('Original input:', jsonStr);
     return {
-      title: { english: '', chinese: '' },
-      caption: { english: '', chinese: '' }
+      title: '',
+      caption: ''
     };
   }
 };
 
-export const parseTags = (jsonStr: string): string[] => {
+export const parseTags = (jsonStr: string): string => {
   try {
     console.log('Parsing tags, input:', jsonStr);
     const response = JSON.parse(jsonStr) as TagsResponse;
@@ -258,18 +261,18 @@ export const parseTags = (jsonStr: string): string[] => {
       throw new Error('Invalid tags format');
     }
 
-    const result = [
+    const tags = [
       response.genre.toLowerCase(),
       ...response.english_tags.map(tag => tag.toLowerCase().trim()),
       ...response.chinese_tags.map(tag => tag.trim())
     ];
-    console.log('Processed tags result:', result);
+    console.log('Processed tags result:', tags);
 
-    return result;
+    return tags.join(',');
   } catch (e) {
     console.error('Failed to parse tags:', e);
     console.error('Original input:', jsonStr);
-    return [];
+    return '';
   }
 };
 
