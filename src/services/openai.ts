@@ -14,8 +14,8 @@ const RATE_LIMIT_MAX_QUERIES_PER_HOUR = 1000;
 
 type Provider = 'openai' | 'anthropic';
 const DEFAULT_PROVIDER: Provider = 'openai';
-const OPENAI_MODEL = 'gpt-4-vision-preview';
-const ANTHROPIC_MODEL = 'claude-3-sonnet-20240229';
+const OPENAI_MODEL = 'gpt-4o';
+const ANTHROPIC_MODEL = 'claude-3.5-sonnet';
 
 // Tool definitions for structured responses
 const tools = {
@@ -180,19 +180,8 @@ Use the provided tool to format your response.`;
       model: openai.chat(OPENAI_MODEL),
       messages: [{
         role: 'user',
-        content: [
-          { type: 'text', text: basePrompt },
-          { 
-            type: 'image_url', 
-            image_url: { 
-              url: `data:image/jpeg;base64,${imageData}`,
-              detail: 'high'
-            } 
-          }
-        ],
-      } as CoreUserMessage],
-      temperature: 0.8,
-      maxTokens: 1000,
+        content: basePrompt + '\n\n' + `[Image: data:image/jpeg;base64,${imageData}]`
+      }],
       tools: { [toolName]: tool },
       toolChoice: { type: 'tool', toolName }
     };
@@ -201,20 +190,8 @@ Use the provided tool to format your response.`;
       model: anthropic(ANTHROPIC_MODEL),
       messages: [{
         role: 'user',
-        content: [
-          { type: 'text', text: basePrompt },
-          { 
-            type: 'image', 
-            source: { 
-              type: 'base64', 
-              data: imageData,
-              mediaType: 'image/jpeg'
-            } 
-          }
-        ],
-      } as CoreUserMessage],
-      temperature: 0.8,
-      maxTokens: 1000,
+        content: basePrompt + '\n\n' + `[Image: data:image/jpeg;base64,${imageData}]`
+      }],
       tools: { [toolName]: tool },
       toolChoice: { type: 'tool', toolName }
     };
@@ -231,7 +208,7 @@ export const streamOpenAiImageQuery = async (
   await checkRateLimitAndBailIfNecessary();
 
   const stream = createStreamableValue('');
-  const args = getImageTextArgs(imageBase64, query, provider);
+  const args = getImageTextArgs(imageBase64, query);
 
   if (args) {
     (async () => {
@@ -253,7 +230,7 @@ export const generateOpenAiImageQuery = async (
 ) => {
   await checkRateLimitAndBailIfNecessary();
 
-  const args = getImageTextArgs(imageBase64, query, provider);
+  const args = getImageTextArgs(imageBase64, query);
 
   if (args) {
     const { text, toolCalls } = await generateText(args);

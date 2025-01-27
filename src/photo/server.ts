@@ -140,23 +140,51 @@ const blurImage = async (image: ArrayBuffer) =>
     .blur(4),
   );
 
-export const resizeImageFromUrl = async (url: string) => 
-  fetch(decodeURIComponent(url))
-    .then(res => res.arrayBuffer())
+export const resizeImageFromUrl = async (url: string) => {
+  // Remove Next.js image optimization parameters if present
+  const cleanUrl = url.includes('_next/image') 
+    ? new URL(decodeURIComponent(url)).searchParams.get('url') || url
+    : url;
+
+  return fetch(decodeURIComponent(cleanUrl))
+    .then(async res => {
+      const buffer = await res.arrayBuffer();
+      // Verify the image format
+      const metadata = await sharp(buffer).metadata();
+      if (!metadata.format) {
+        throw new Error('Unable to determine image format');
+      }
+      return buffer;
+    })
     .then(buffer => resizeImage(buffer))
     .catch(e => {
-      console.log(`Error resizing image from URL (${url})`, e);
+      console.log(`Error resizing image from URL (${cleanUrl})`, e);
       return '';
     });
+};
 
-export const blurImageFromUrl = async (url: string) => 
-  fetch(decodeURIComponent(url))
-    .then(res => res.arrayBuffer())
+export const blurImageFromUrl = async (url: string) => {
+  // Remove Next.js image optimization parameters if present
+  const cleanUrl = url.includes('_next/image') 
+    ? new URL(decodeURIComponent(url)).searchParams.get('url') || url
+    : url;
+
+  return fetch(decodeURIComponent(cleanUrl))
+    .then(async res => {
+      const buffer = await res.arrayBuffer();
+      // Verify the image format
+      const metadata = await sharp(buffer).metadata();
+      if (!metadata.format) {
+        throw new Error('Unable to determine image format');
+      }
+      return buffer;
+    })
     .then(buffer => blurImage(buffer))
     .catch(e => {
-      console.log(`Error blurring image from URL (${url})`, e);
+      console.log(`Error blurring image from URL (${cleanUrl})`, e);
       return '';
     });
+};
 
 const GPS_NULL_STRING = '-';
 

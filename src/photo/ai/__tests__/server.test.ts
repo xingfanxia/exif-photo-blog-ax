@@ -69,10 +69,8 @@ describe('AI Image Analysis', () => {
       });
       console.log('Testing parseTitleAndCaption with input:', input);
       const result = parseTitleAndCaption(input);
-      expect(result.title.english).toBe('Mountain Dawn');
-      expect(result.title.chinese).toBe('山晓');
-      expect(result.caption.english).toBe('First light breaks over misty peaks in silent majesty');
-      expect(result.caption.chinese).toBe('晨光静谧地洒落在云雾缭绕的山峰');
+      expect(result.title).toBe('Mountain Dawn | 山晓');
+      expect(result.caption).toBe('First light breaks over misty peaks in silent majesty | 晨光静谧地洒落在云雾缭绕的山峰');
     });
 
     test('parseTitleAndCaption handles invalid input', () => {
@@ -80,8 +78,8 @@ describe('AI Image Analysis', () => {
       console.log('Testing parseTitleAndCaption with invalid input:', input);
       const result = parseTitleAndCaption(input);
       expect(result).toEqual({
-        title: { english: '', chinese: '' },
-        caption: { english: '', chinese: '' }
+        title: '',
+        caption: ''
       });
     });
 

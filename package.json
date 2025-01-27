@@ -44,7 +44,8 @@
     "swr": "^2.3.0",
     "ts-exif-parser": "^0.2.2",
     "use-debounce": "^10.0.4",
-    "viewerjs": "^1.11.7"
+    "viewerjs": "^1.11.7",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "15.1.6",
