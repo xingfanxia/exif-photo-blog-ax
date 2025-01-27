@@ -42,11 +42,14 @@ export type AiImageQuery =
   'description-large' |
   'description-semantic';
 
+export const PHOTO_GENRES = ['portrait', 'street', 'landscape', 'events'] as const;
+export type PhotoGenre = typeof PHOTO_GENRES[number];
+
 export const AI_IMAGE_QUERIES: Record<AiImageQuery, string> = {
-  'title': 'Write a compelling title for this image in 3 words or less',
-  'caption': 'Write a pithy caption for this image in 6 words or less and no punctuation',
-  'title-and-caption': 'Write a compelling title and pithy caption of 8 words or less for this image, using the format Title: "title" Caption: "caption"',
-  'tags': 'Describe this image three or less comma-separated keywords with no adjective or adverbs',
+  'title': 'Write a poetic and emotionally evocative title for this image in both English and Chinese. Focus on the mood, atmosphere, and feelings the image evokes. Format: "English Title | 中文标题". Keep each title within 5 words.',
+  'caption': 'Write a poetic and emotionally resonant caption for this image in both English and Chinese. Focus on the mood, atmosphere, and feelings. Format: "English Caption | 中文说明". Keep each caption within 8 words.',
+  'title-and-caption': 'Write a poetic title and caption for this image in both English and Chinese. Focus on the mood, atmosphere, and feelings. Format: Title: "English Title | 中文标题" Caption: "English Caption | 中文说明". Keep titles within 5 words and captions within 8 words.',
+  'tags': 'First, identify which one of these genres best fits this image: portrait, street, landscape, events. Then, generate a comma-separated list of 10 tags, mixing English and Chinese naturally. Start with the identified genre, then add more specific descriptive tags. Example: "street, 街头, night market, 夜市, neon lights, 霓虹灯, crowd, 人群, urban life, 城市生活"',
   'description-small': 'Describe this image succinctly without the initial text "This image shows" or "This is a picture of"',
   'description': 'Describe this image',
   'description-large': 'Describe this image in detail',
@@ -59,9 +62,13 @@ export const parseTitleAndCaption = (text: string) => {
     : text.match(/^(.*?): (.*?)$/);
 
   return {
-    title: matches?.[1] ?? '',
-    caption: matches?.[2] ?? '',
+    title: matches?.[1]?.trim() ?? '',
+    caption: matches?.[2]?.trim() ?? '',
   };
+};
+
+export const parseBilingualTags = (text: string): string[] => {
+  return text.split(',').map(t => t.trim());
 };
 
 export const cleanUpAiTextResponse = (text: string) =>

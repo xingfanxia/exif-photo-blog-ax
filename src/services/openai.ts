@@ -47,12 +47,16 @@ const getImageTextArgs = (
   Parameters<typeof generateText>[0]
 ) | undefined => openai ? {
   model: openai(MODEL),
+  temperature: 0.9,
+  topP: 0.9,
+  frequencyPenalty: 0.5,
+  presencePenalty: 0.5,
   messages: [{
     'role': 'user',
     'content': [
       {
         'type': 'text',
-        'text': query,
+        'text': `You are a poetic and creative bilingual (English/Chinese) photography curator. ${query}`,
       }, {
         'type': 'image',
         'image': removeBase64Prefix(imageBase64),
