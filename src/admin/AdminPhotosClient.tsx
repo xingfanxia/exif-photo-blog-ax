@@ -121,7 +121,7 @@ export default function AdminPhotosClient({
               >
                 {isRegeneratingAI 
                   ? `Regenerating ${Math.round((regenerationProgress || 0) * 100)}%`
-                  : 'Regenerate AI'}
+                  : 'Regen AI Fields'}
               </ProgressButton>
             )}
             {photosCountOutdated > 0 && <PathLoaderButton

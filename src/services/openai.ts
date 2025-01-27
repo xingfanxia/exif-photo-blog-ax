@@ -65,29 +65,6 @@ const getImageTextArgs = (
   }],
 } : undefined;
 
-export const streamOpenAiImageQuery = async (
-  imageBase64: string,
-  query: string,
-) => {
-  await checkRateLimitAndBailIfNecessary();
-
-  const stream = createStreamableValue('');
-
-  const args = getImageTextArgs(imageBase64, query);
-
-  if (args) {
-    (async () => {
-      const { textStream } = await streamText(args);
-      for await (const delta of textStream) {
-        stream.update(cleanUpAiTextResponse(delta));
-      }
-      stream.done();
-    })();
-  }
-
-  return stream.value;
-};
-
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 1000;
 
@@ -98,7 +75,123 @@ const isContentFilterResponse = (text: string) => {
   return lowerText.includes("i'm sorry") || 
          lowerText.includes("i apologize") || 
          lowerText.includes("cannot help") ||
-         lowerText.includes("can't help");
+         lowerText.includes("can't help") ||
+         lowerText.includes("identifying or describing");
+};
+
+export const streamOpenAiImageQuery = async (
+  imageBase64: string,
+  query: string,
+) => {
+  await checkRateLimitAndBailIfNecessary();
+  const stream = createStreamableValue('');
+  const args = getImageTextArgs(imageBase64, query);
+
+  if (args) {
+    (async () => {
+      let lastError: Error | undefined;
+      
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          // Clear stream at the start of each attempt
+          stream.update('');
+          console.log(`Starting attempt ${attempt + 1}/${MAX_RETRIES}`);
+          
+          const { textStream } = await streamText(args);
+          let accumulatedText = '';
+          let partialText = '';
+          let shouldRetry = false;
+          
+          try {
+            for await (const delta of textStream) {
+              const cleanedDelta = cleanUpAiTextResponse(delta);
+              
+              // Check if this delta contains a filter response immediately
+              if (isContentFilterResponse(cleanedDelta)) {
+                shouldRetry = true;
+                break;
+              }
+              
+              partialText += cleanedDelta;
+              
+              // Only update accumulated text and stream on word boundaries
+              if (cleanedDelta.includes(' ') || cleanedDelta.includes('\n')) {
+                accumulatedText += partialText;
+                
+                // Check accumulated text for filter response
+                if (isContentFilterResponse(accumulatedText)) {
+                  shouldRetry = true;
+                  break;
+                }
+                
+                // Only update stream if we haven't detected a filter response
+                if (!shouldRetry) {
+                  stream.update(partialText);
+                }
+                partialText = '';
+              }
+            }
+            
+            // Handle any remaining partial text if we haven't detected a filter response
+            if (!shouldRetry) {
+              if (partialText) {
+                accumulatedText += partialText;
+                if (isContentFilterResponse(accumulatedText)) {
+                  shouldRetry = true;
+                } else {
+                  stream.update(partialText);
+                }
+              }
+            }
+          } catch (streamError) {
+            const err = streamError instanceof Error ? streamError : new Error(String(streamError));
+            if (attempt < MAX_RETRIES - 1) {
+              console.log(`Retry attempt ${attempt + 1}/${MAX_RETRIES} due to stream error:`, err.message);
+              await sleep(RETRY_DELAY_MS);
+              continue;
+            }
+            throw err;
+          }
+          
+          if (shouldRetry) {
+            if (attempt < MAX_RETRIES - 1) {
+              console.log(`Retry attempt ${attempt + 1}/${MAX_RETRIES} due to content filter`);
+              await sleep(RETRY_DELAY_MS);
+              continue;
+            } else {
+              stream.error('Failed to generate text after all retries');
+              return;
+            }
+          }
+          
+          // If we get here without hitting the content filter, we succeeded
+          stream.done();
+          return;
+          
+        } catch (error: unknown) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          lastError = err;
+          if (attempt < MAX_RETRIES - 1) {
+            console.log(`Retry attempt ${attempt + 1}/${MAX_RETRIES} due to error:`, err.message);
+            await sleep(RETRY_DELAY_MS);
+            continue;
+          }
+          console.error(`Failed to generate text after ${MAX_RETRIES} attempts:`, lastError);
+          stream.error(err.message);
+          return;
+        }
+      }
+      
+      // If we get here, all retries failed
+      if (lastError) {
+        stream.error(lastError.message);
+      } else {
+        stream.error('Failed to generate text after all retries');
+      }
+    })();
+  }
+
+  return stream.value;
 };
 
 export const generateOpenAiImageQuery = async (
