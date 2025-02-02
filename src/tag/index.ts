@@ -54,14 +54,18 @@ export const sortTags = (
   tagToExclude?: string,
 ) => tags
   .filter(tag => tag !== tagToExclude)
-  .sort((a, b) => isTagFavs(a) ? -1 : a.localeCompare(b));
+  .sort((a, b) => isTagFavs(a) ? -1 : isTagFavs(b) ? 1 : a.localeCompare(b));
 
 export const sortTagsObject = (
   tags: Tags,
   tagToHide?: string,
 ) => tags
-  .filter(({ tag }) => tag!== tagToHide)
-  .sort(({ tag: a }, { tag: b }) => isTagFavs(a) ? -1 : a.localeCompare(b));
+  .filter(({ tag }) => tag !== tagToHide)
+  .sort(({ tag: a, count: countA }, { tag: b, count: countB }) => 
+    isTagFavs(a) ? -1 : 
+    isTagFavs(b) ? 1 : 
+    countB - countA || a.localeCompare(b)
+  );
 
 export const sortTagsWithoutFavs = (tags: string[]) =>
   sortTags(tags, TAG_FAVS);
