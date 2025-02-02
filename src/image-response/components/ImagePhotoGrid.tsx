@@ -3,9 +3,8 @@
 import { Photo } from '@/photo';
 import {
   NextImageSize,
-  getNextImageUrlForRequest,
 } from '@/services/next-image';
-import { IS_PREVIEW } from '@/site/config';
+import Image from 'next/image';
 
 export default function ImagePhotoGrid({
   photos,
@@ -64,22 +63,20 @@ export default function ImagePhotoGrid({
             filter: 'saturate(1.1)',
           }}
         >
-          <img {...{
-            src: getNextImageUrlForRequest(
-              url,
-              nextImageWidth,
-              undefined,
-              undefined,
-              IS_PREVIEW,
-            ),
-            style: {
+          <Image
+            src={url}
+            width={nextImageWidth}
+            height={Math.round(nextImageWidth / (cellWidth / cellHeight))}
+            style={{
               width: '100%',
               ...imagePosition === 'center' && {
                 height: '100%',
               },
               objectFit: 'cover',
-            },
-          }} />
+            }}
+            quality={80}
+            alt=""
+          />
         </div>,
       )}
     </div>
