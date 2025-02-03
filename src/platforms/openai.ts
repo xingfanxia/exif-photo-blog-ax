@@ -13,7 +13,7 @@ import { cleanUpAiTextResponse } from '@/photo/ai';
 const redis = HAS_REDIS_STORAGE ? Redis.fromEnv() : undefined;
 
 const RATE_LIMIT_IDENTIFIER = 'openai-image-query';
-const RATE_LIMIT_MAX_QUERIES_PER_HOUR = 100;
+const RATE_LIMIT_MAX_QUERIES_PER_HOUR = 10000;
 const MODEL = 'gpt-4o';
 
 const openai = AI_TEXT_GENERATION_ENABLED

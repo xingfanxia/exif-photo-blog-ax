@@ -186,10 +186,9 @@ export default function PhotoGridSidebar({
         />]}
       />}
       {SHOW_SIDEBAR_CAMERAS_FIRST
-        ? <>{camerasContent}{tagsContent}</>
-        : <>{tagsContent}{camerasContent}</>}
+        ? <>{camerasContent}{filmsContent}{tagsContent}</>
+        : <>{tagsContent}{camerasContent}{filmsContent}</>}
       {recipesContent}
-      {filmsContent}
       {photoStatsContent}
     </div>
   );
