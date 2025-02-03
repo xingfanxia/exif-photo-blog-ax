@@ -258,16 +258,10 @@ export default function PhotoGridSidebar({
           }}
         />]}
       />}
-      {CATEGORY_VISIBILITY.map(category => {
-        switch (category) {
-        case 'cameras': return camerasContent;
-        case 'lenses': return lensesContent;
-        case 'tags': return tagsContent;
-        case 'recipes': return recipesContent;
-        case 'films': return filmsContent;
-        case 'focal-lengths': return focalLengthsContent;
-        }
-      })}
+      {SHOW_SIDEBAR_CAMERAS_FIRST
+        ? <>{camerasContent}{filmsContent}{tagsContent}</>
+        : <>{tagsContent}{camerasContent}{filmsContent}</>}
+      {recipesContent}
       {photoStatsContent}
     </div>
   );
