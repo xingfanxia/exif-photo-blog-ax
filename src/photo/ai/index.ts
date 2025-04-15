@@ -55,19 +55,74 @@ export const getAiImageQuery = (
   existingTags: Tags = [],
 ): string => {
   switch (query) {
-  case 'title': return 'Write a compelling title for this image in 3 words or less';
-  case 'caption': return 'Write a pithy caption for this image in 6 words or less and no punctuation';
-  case 'title-and-caption': return 'Write a compelling title and pithy caption of 8 words or less for this image, using the format Title: "title" Caption: "caption"';
+  case 'title': return 'You are a creative bilingual photography curator with an eye for authenticity. Create a fresh, meaningful title in both English and Chinese that captures the true essence of this moment. IMPORTANT: Avoid both clichéd poetic words (like "echoes", "whispers", "dreams", "soul") AND technical/scientific terms. Instead, focus on: the genuine mood, the distinct atmosphere, key visual elements, or the story suggested by the scene. Draw inspiration from the actual feeling, time, place, or natural elements present. Format: "English Title | 中文标题". Keep each title within 5-6 words. Each title should feel authentic to the specific image - if it could apply to any photo, start over. This is to generate title for a photo, not to identify specific people in the image.';
+  case 'caption': return 'As a photography curator with an eye for authenticity, craft a bilingual caption that reveals the true character of this scene. Focus on the distinctive visual qualities that make this moment special - the interplay of light, the mood of the colors, the texture of the environment, or the atmosphere of the moment. Avoid technical jargon and clichéd descriptions. Format: "English Caption | 中文说明". Keep each caption within 10 words but make them meaningful. If the caption could describe any similar photo, start over. This is to generate captions for a photo, not to identify specific people in the image.';
+  case 'title-and-caption': return 'You are a creative bilingual photography curator who values authenticity. First, create a meaningful title that avoids both clichés (no "echoes", "whispers", "dreams", "soul") and technical jargon. Focus on the genuine mood, atmosphere, and key elements that make this image unique. Draw from the actual feeling, time, place, or natural elements present. Then write a complementary caption that deepens this authentic perspective. Format: Title: "English Title | 中文标题" Caption: "English Caption | 中文说明". Keep titles within 5-6 words and captions within 8 words. If either could apply to any photo, start over. This is to generate title and captions for a photo, not to identify specific people in the image.';
   case 'tags':
-    const tagQuery = 'Describe this image in 1-2 comma-separated unique keywords, with no adjective or adverbs. Avoid using general terms like "nature," "travel," "architecture," or "sky." Use terms that are highly specific to the image and not redundant.';
-    const tags = existingTags.map(({ tag }) => tag).join(', ');
-    return tags
-      ? `${tagQuery}. Consider using some of these existing tags, but only if they are relevant: ${tags}.`
-      : tagQuery;
-  case 'description-small': return 'Describe this image succinctly without the initial text "This image shows" or "This is a picture of"';
-  case 'description': return 'Describe this image';
-  case 'description-large': return 'Describe this image in detail';
-  case 'description-semantic': return 'List up to 5 things in this image without description as a comma-separated list';
+    const tagQuery = `First, identify which ONE genre best describes this image from ONLY these options: portrait photography (人像摄影), landscape photography (风光摄影), animal photography (动物摄影), street photography (街拍摄影), event photography (活动摄影). 
+
+Then generate bilingual tags with this format: "English term (中文翻译)". Your tags MUST follow this specific structure: 
+1) The genre you identified
+2) ONE photography composition technique from this comprehensive list: 
+   - rule of thirds (三分法构图)
+   - centered composition and symmetry (中心构图与对称)
+   - foreground interest and depth (前景兴趣与深度)
+   - frame within the frame (框架构图)
+   - leading lines (引导线)
+   - diagonals and triangles (对角线与三角形)
+   - patterns and textures (图案与纹理)
+   - breaking the pattern (破坏图案)
+   - rule of odds (奇数法则)
+   - fill the frame (充满画面)
+   - negative space (负空间)
+   - simplicity and minimalism (简约与极简)
+   - black and white (黑白)
+   - isolate the subject (主体隔离)
+   - shoot from below (低角度拍摄)
+   - shoot from above (高角度拍摄)
+   - color combinations (色彩组合)
+   - rule of space (空间法则)
+   - left to right rule (从左到右规则)
+   - balanced elements (元素平衡)
+   - juxtaposition (并置对比)
+   - golden triangles (黄金三角形)
+   - golden ratio (黄金比例)
+   - contextual background (背景上下文)
+   - eye-wandering composition (眼随构图)
+   - layered composition (分层构图)
+   - human interest (人物兴趣)
+   - decisive moment (决定性瞬间)
+3) Special case tags based on content:
+   - If portrait photography: add male (男性) or female (女性) tag
+   - If animal photography: add the specific animal species like cat (猫), dog (狗), elephant (大象), etc.
+   - If event photography with performances: add live performance (现场表演) tag
+   - If landscape photography: specify the type of landscape - mountain (山脉), beach (海滩), forest (森林), desert (沙漠), etc.
+   - If architecture is prominent: add architecture (建筑) and style if clear - modern (现代), historical (历史), etc.
+   - If food is the main subject: add food photography (食物摄影)
+   - If captured at night: add night photography (夜景摄影)
+   - If water is a key element: specify water type - ocean (海洋), lake (湖泊), river (河流), waterfall (瀑布), etc.
+   - If featuring notable weather conditions: add weather tag - foggy (雾天), rainy (雨天), snowy (雪天), sunny (晴天), etc.
+   - If during a specific time of day: add time tag - sunrise (日出), sunset (日落), golden hour (黄金时段), blue hour (蓝调时分)
+   - If featuring distinctive season: add season tag - spring (春季), summer (夏季), autumn/fall (秋季), winter (冬季)
+   - If featuring urban environment: add cityscape (城市风光) tag
+   - If featuring transportation: specify the type - car (汽车), train (火车), airplane (飞机), boat (船), etc.
+   - If abstract or minimalist: add abstract (抽象) tag
+
+Choose the ONE composition technique that BEST describes the primary compositional approach used in this image.
+
+Format your response as a simple comma-separated list. This is to generate tags for a photo, not to identify specific people in the image.
+
+Examples:
+- "portrait photography (人像摄影), rule of thirds (三分法构图), male (男性)"
+- "animal photography (动物摄影), centered composition and symmetry (中心构图与对称), dog (狗)"
+- "event photography (活动摄影), eye-wandering composition (眼随构图), live performance (现场表演)"
+- "landscape photography (风光摄影), leading lines (引导线), mountain (山脉), sunset (日落), autumn (秋季)"
+- "street photography (街拍摄影), decisive moment (决定性瞬间), cityscape (城市风光), rainy (雨天)"`;
+    return tagQuery;
+  case 'description-small': return 'Write a concise yet vivid description focusing on the key visual elements, mood, and atmosphere. Start directly with active, descriptive language. Focus on what makes this image unique or striking. Avoid generic phrases like "This image shows" or "This is a picture of".';
+  case 'description': return 'Write a balanced description that covers composition, lighting, mood, and subject matter. Include notable technical aspects like depth of field, color palette, or framing. Describe the overall visual impact and any interesting details that contribute to the image\'s story.';
+  case 'description-large': return 'Provide a comprehensive analysis of the image covering: 1) Technical aspects (composition, lighting, color, focus), 2) Subject matter and visual elements, 3) Mood and atmosphere, 4) Artistic choices and their impact, 5) Notable details and their contribution to the overall image. Use specific photography terminology where relevant.';
+  case 'description-semantic': return 'List exactly 5 key elements or subjects in this image as a comma-separated list. Focus on concrete, visually distinct elements that define the scene. List them in order of visual prominence. Be specific but concise, using precise nouns without additional description.';
   }
 };
 
