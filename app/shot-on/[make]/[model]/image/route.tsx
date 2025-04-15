@@ -10,27 +10,14 @@ import { ImageResponse } from 'next/og';
 import { getImageResponseCacheControlHeaders } from '@/image-response/cache';
 import { getUniqueCameras } from '@/photo/db/query';
 import { staticallyGenerateCategoryIfConfigured } from '@/app/static';
+import { GENERATE_STATIC_PARAMS_LIMIT } from '@/photo/db';
 
-<<<<<<< HEAD
 export const generateStaticParams = staticallyGenerateCategoryIfConfigured(
   'cameras',
   'image',
   getUniqueCameras,
-  cameras => cameras.slice(0, 50).map(({ camera }) => formatCameraParams(camera)),
+  cameras => cameras.slice(0, GENERATE_STATIC_PARAMS_LIMIT).map(({ camera }) => formatCameraParams(camera)),
 );
-=======
-export let generateStaticParams:
-  (() => Promise<{ camera: Camera }[]>) | undefined = undefined;
-
-if (STATICALLY_OPTIMIZED_PHOTO_CATEGORY_OG_IMAGES && IS_PRODUCTION) {
-  generateStaticParams = async () => {
-    const cameras = await getUniqueCameras();
-    return cameras
-      .slice(0, GENERATE_STATIC_PARAMS_LIMIT)
-      .map(({ camera }) => ({ camera }));
-  };
-}
->>>>>>> adcdc1d6 (revert static limit)
 
 export async function GET(
   _: Request,

@@ -1,7 +1,7 @@
 'use client';
 
 import { clsx } from 'clsx/lite';
-import SiteGrid from '@/components/SiteGrid';
+import AppGrid from '@/components/AppGrid';
 import {
   AI_TEXT_GENERATION_ENABLED,
   PRESERVE_ORIGINAL_UPLOADS,
@@ -102,7 +102,7 @@ export default function AdminPhotosClient({
   };
 
   return (
-    <SiteGrid
+    <AppGrid
       contentMain={
         <div className="space-y-4">
           <div className="flex gap-2">
