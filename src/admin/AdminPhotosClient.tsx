@@ -15,7 +15,7 @@ import { useAppState } from '@/state/AppState';
 import PhotoUploadWithStatus from '@/photo/PhotoUploadWithStatus';
 import { HiSparkles } from 'react-icons/hi';
 import ProgressButton from '@/components/primitives/ProgressButton';
-import { syncPhotosAction, getAllPhotoIdsAction } from '@/photo/actions';
+import { syncPhotosAction, getAllPhotoIdsAction, getPhotosCachedAction } from '@/photo/actions';
 import { toastSuccess } from '@/toast';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -48,6 +48,7 @@ export default function AdminPhotosClient({
   const [regenerationProgress, setRegenerationProgress] = useState<number>();
   const [showAiButton, setShowAiButton] = useState(false);
   const [tagsOnlyMode, setTagsOnlyMode] = useState(false);
+  const [untitledOnlyMode, setUntitledOnlyMode] = useState(false);
   const { registerAdminUpdate } = useAppState();
   const router = useRouter();
 
@@ -56,28 +57,73 @@ export default function AdminPhotosClient({
   }, [hasAiTextGeneration]);
 
   const handleRegenerateAI = async () => {
-    const message = tagsOnlyMode 
-      ? `Are you sure you want to regenerate AI tags for all ${photosCount} photos? This may take a while.`
-      : `Are you sure you want to regenerate all AI fields for all ${photosCount} photos? This may take a while.`;
+    // Initial confirmation with general message
+    let message = tagsOnlyMode 
+      ? `Are you sure you want to regenerate AI tags`
+      : `Are you sure you want to regenerate all AI fields`;
+      
+    if (untitledOnlyMode) {
+      message += ` for untitled photos? This may take a while.`;
+    } else {
+      message += ` for all ${photosCount} photos? This may take a while.`;
+    }
       
     if (!confirm(message)) {
       return;
     }
 
-    setIsRegeneratingAI(true);
-    setRegenerationProgress(0);
+    // If untitled only mode is enabled, get the exact count first and show a second confirmation
+    if (untitledOnlyMode) {
+      setIsRegeneratingAI(true); // Show loading state while counting
+      
+      try {
+        // Get all photos to check which ones are untitled
+        const allPhotos = await getPhotosCachedAction({ hidden: 'include' });
+        // Filter to only photos with empty titles
+        const untitledPhotos = allPhotos.filter(photo => !photo.title || photo.title.trim() === '');
+        const untitledCount = untitledPhotos.length;
+        
+        setIsRegeneratingAI(false); // Hide loading state before confirmation
 
+        if (untitledCount === 0) {
+          alert('No untitled photos found. Nothing to process.');
+          return;
+        }
+
+        // Second confirmation with exact count
+        const fieldDescription = tagsOnlyMode ? 'AI tags' : 'AI fields';
+        if (!confirm(`Found ${untitledCount} untitled photos. Do you want to regenerate ${fieldDescription} for all of them?`)) {
+          return;
+        }
+        
+        // Proceed with processing only the untitled photos
+        setIsRegeneratingAI(true);
+        setRegenerationProgress(0);
+        await processPhotos(untitledPhotos.map(p => p.id), untitledCount);
+        
+      } catch (error) {
+        console.error('Error counting untitled photos:', error);
+        toastSuccess('Error counting untitled photos. Please try again.');
+        setIsRegeneratingAI(false);
+      }
+    } else {
+      // Process all photos directly
+      setIsRegeneratingAI(true);
+      setRegenerationProgress(0);
+      await processPhotos(await getAllPhotoIdsAction(), photosCount);
+    }
+  };
+
+  // Helper function to process photos in batches
+  const processPhotos = async (photoIds: string[], totalCount: number) => {
     try {
-      // Process photos in batches with rate limiting to avoid OpenAI rate limits
-      const BATCH_SIZE = 2; // Smaller batch size to reduce concurrent API calls
-      const DELAY_BETWEEN_BATCHES = 2000; // 2 second delay between batches
+      // Process photos in batches 
+      const BATCH_SIZE = 2;
       let processedCount = 0;
 
-      // Fetch all photo IDs using server action
-      const allPhotoIds = await getAllPhotoIdsAction();
       const photoBatches = [];
-      for (let i = 0; i < allPhotoIds.length; i += BATCH_SIZE) {
-        photoBatches.push(allPhotoIds.slice(i, i + BATCH_SIZE));
+      for (let i = 0; i < photoIds.length; i += BATCH_SIZE) {
+        photoBatches.push(photoIds.slice(i, i + BATCH_SIZE));
       }
 
       // Select which fields to regenerate
@@ -97,17 +143,14 @@ export default function AdminPhotosClient({
         
         processedCount += batch.length;
         // Update progress
-        const progress = Math.min(processedCount / photosCount, 1);
+        const progress = Math.min(processedCount / totalCount, 1);
         setRegenerationProgress(progress);
-        
-        // Add delay between batches to avoid rate limiting
-        if (i < photoBatches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
-        }
       }
 
       const fieldDescription = tagsOnlyMode ? 'AI tags' : 'AI fields';
-      toastSuccess(`${fieldDescription} regenerated for all ${photosCount} photos`);
+      const targetDescription = untitledOnlyMode ? `${totalCount} untitled photos` : `all ${totalCount} photos`;
+      toastSuccess(`${fieldDescription} regenerated for ${targetDescription}`);
+      
       // Register update and refresh the page
       registerAdminUpdate?.();
       router.refresh();
@@ -142,19 +185,33 @@ export default function AdminPhotosClient({
                   hideTextOnMobile={false}
                 >
                   {isRegeneratingAI 
-                    ? `Regenerating ${Math.round((regenerationProgress || 0) * 100)}%`
+                    ? regenerationProgress !== undefined
+                      ? `Regenerating ${Math.round((regenerationProgress || 0) * 100)}%`
+                      : "Counting photos..."
                     : `Regen AI ${tagsOnlyMode ? 'Tags' : 'Fields'}`}
                 </ProgressButton>
-                <label className="flex items-center text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={tagsOnlyMode}
-                    onChange={(e) => setTagsOnlyMode(e.target.checked)}
-                    className="mr-1.5 h-3.5 w-3.5"
-                    disabled={isRegeneratingAI}
-                  />
-                  Tags Only
-                </label>
+                <div className="flex flex-col gap-1 text-sm">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tagsOnlyMode}
+                      onChange={(e) => setTagsOnlyMode(e.target.checked)}
+                      className="mr-1.5 h-3.5 w-3.5"
+                      disabled={isRegeneratingAI}
+                    />
+                    Tags Only
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={untitledOnlyMode}
+                      onChange={(e) => setUntitledOnlyMode(e.target.checked)}
+                      className="mr-1.5 h-3.5 w-3.5"
+                      disabled={isRegeneratingAI}
+                    />
+                    Untitled Photos Only
+                  </label>
+                </div>
               </div>
             )}
             {photosCountOutdated > 0 &&
