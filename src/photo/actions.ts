@@ -374,7 +374,11 @@ export const getExifDataAction = async (
 // - strip GPS data if necessary
 // - update blur data (or destroy if blur is disabled)
 // - generate AI text data, if enabled, and auto-generated fields are empty
-export const syncPhotoAction = async (photoId: string) =>
+export const syncPhotoAction = async (
+  photoId: string, 
+  forceUpdateAi: boolean = false,
+  fieldsToRegenerate: ('title' | 'caption' | 'tags' | 'semanticDescription')[] = ['title', 'caption', 'tags', 'semanticDescription']
+) =>
   runAuthenticatedAdminServerAction(async () => {
     const photo = await getPhoto(photoId ?? '', true);
 
@@ -408,7 +412,7 @@ export const syncPhotoAction = async (photoId: string) =>
         }
 
         const {
-          title: atTitle,
+          title: aiTitle,
           caption: aiCaption,
           tags: aiTags,
           semanticDescription: aiSemanticDescription,
@@ -431,10 +435,10 @@ export const syncPhotoAction = async (photoId: string) =>
             ...formDataFromPhoto,
             ...formDataFromExif,
             ...!BLUR_ENABLED && { blurData: undefined },
-            ...!photo.title && { title: atTitle },
-            ...!photo.caption && { caption: aiCaption },
-            ...photo.tags.length === 0 && { tags: aiTags },
-            ...!photo.semanticDescription &&
+            ...(forceUpdateAi || !photo.title) && fieldsToRegenerate.includes('title') && { title: aiTitle },
+            ...(forceUpdateAi || !photo.caption) && fieldsToRegenerate.includes('caption') && { caption: aiCaption },
+            ...(forceUpdateAi || photo.tags.length === 0) && fieldsToRegenerate.includes('tags') && { tags: aiTags },
+            ...(forceUpdateAi || !photo.semanticDescription) && fieldsToRegenerate.includes('semanticDescription') &&
               { semanticDescription: aiSemanticDescription },
           });
 
@@ -448,10 +452,14 @@ export const syncPhotoAction = async (photoId: string) =>
     }
   });
 
-export const syncPhotosAction = async (photoIds: string[]) =>
+export const syncPhotosAction = async (
+  photoIds: string[], 
+  forceUpdateAi: boolean = false,
+  fieldsToRegenerate: ('title' | 'caption' | 'tags' | 'semanticDescription')[] = ['title', 'caption', 'tags', 'semanticDescription']
+) =>
   runAuthenticatedAdminServerAction(async () => {
     for (const photoId of photoIds) {
-      await syncPhotoAction(photoId);
+      await syncPhotoAction(photoId, forceUpdateAi, fieldsToRegenerate);
     }
     revalidateAllKeysAndPaths();
   });
@@ -510,3 +518,16 @@ export const searchPhotosAction = async (query: string) =>
       console.error('Could not query photos', e);
       return [] as Photo[];
     });
+
+export const getAllPhotoIdsAction = async () => {
+  'use server';
+  
+  return runAuthenticatedAdminServerAction(async () => {
+    const photos = await getPhotos({
+      hidden: 'include',
+      sortBy: 'createdAt',
+    });
+    
+    return photos.map(p => p.id);
+  });
+};

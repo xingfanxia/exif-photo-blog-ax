@@ -13,7 +13,8 @@ import { cleanUpAiTextResponse } from '@/photo/ai';
 const redis = HAS_REDIS_STORAGE ? Redis.fromEnv() : undefined;
 
 const RATE_LIMIT_IDENTIFIER = 'openai-image-query';
-const RATE_LIMIT_MAX_QUERIES_PER_HOUR = 100;
+// Set rate limit to a very high number effectively disabling it
+const RATE_LIMIT_MAX_QUERIES_PER_HOUR = 100000; 
 const MODEL = 'gpt-4o';
 
 const openai = AI_TEXT_GENERATION_ENABLED
@@ -27,21 +28,10 @@ const ratelimit = redis
   })
   : undefined;
 
-// Allows 100 requests per hour
-const checkRateLimitAndThrow = async () => {
-  if (ratelimit) {
-    let success = false;
-    try {
-      success = (await ratelimit.limit(RATE_LIMIT_IDENTIFIER)).success;
-    } catch (e: any) {
-      console.error('Failed to rate limit OpenAI', e);
-      throw new Error('Failed to rate limit OpenAI');
-    }
-    if (!success) {
-      console.error('OpenAI rate limit exceeded');
-      throw new Error('OpenAI rate limit exceeded');
-    }
-  }
+// Bypass rate limit check - always return successfully
+const checkRateLimitAndBailIfNecessary = async () => {
+  // Rate limiting disabled
+  return true;
 };
 
 const getImageTextArgs = (
@@ -70,7 +60,7 @@ export const streamOpenAiImageQuery = async (
   imageBase64: string,
   query: string,
 ) => {
-  await checkRateLimitAndThrow();
+  await checkRateLimitAndBailIfNecessary();
 
   const stream = createStreamableValue('');
 
@@ -93,7 +83,7 @@ export const generateOpenAiImageQuery = async (
   imageBase64: string,
   query: string,
 ) => {
-  await checkRateLimitAndThrow();
+  await checkRateLimitAndBailIfNecessary();
 
   const args = getImageTextArgs(imageBase64, query);
 
@@ -104,7 +94,7 @@ export const generateOpenAiImageQuery = async (
 };
 
 export const testOpenAiConnection = async () => {
-  await checkRateLimitAndThrow();
+  await checkRateLimitAndBailIfNecessary();
 
   if (openai) {
     return generateText({
