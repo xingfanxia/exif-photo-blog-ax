@@ -53,61 +53,76 @@ export const descriptionForRecipePhotos = (
     explicitDateRange,
   );
 
-export const generateRecipeText = ({
-  title,
-  data,
-  film,
-}: RecipeProps,
-abbreviate?: boolean,
+export const generateRecipeLines = (
+  { title, data, film }: RecipeProps,
+  abbreviate?: boolean,
 ) => {
-  const lines = [
-    `${labelForFilm(film).small.toLocaleUpperCase()}`,
-    // eslint-disable-next-line max-len
-    `${formatWhiteBalance(data).toLocaleUpperCase()} ${formatWhiteBalanceColor(data)}`,
-  ];
+  const lines: string[] = [];
 
-  if (abbreviate) {
-    // eslint-disable-next-line max-len
-    lines.push(`DR${data.dynamicRange.development} NR${formatNoiseReduction(data)}`);
-  } else {
-    lines.push(
-      `DYNAMIC RANGE ${data.dynamicRange.development}`,
-      `NOISE REDUCTION ${formatNoiseReduction(data)}`,
-    );
-  }
+  lines.push(abbreviate
+    ? `${labelForFilm(film).small.toLocaleUpperCase()}`
+    : `FILM: ${labelForFilm(film).medium.toLocaleUpperCase()}`);
+
+  const whiteBalance = formatWhiteBalance(data).toLocaleUpperCase();
+  const whiteBalanceColor = formatWhiteBalanceColor(data);
+
+  lines.push(abbreviate
+    ? `${whiteBalance} ${whiteBalanceColor}`
+    : `${whiteBalance}: ${whiteBalanceColor}`,
+  );
+
+  lines.push(...abbreviate
+    ? [`DR${data.dynamicRange.development} NR${formatNoiseReduction(data)}`]
+    : [
+      `DYNAMIC RANGE: ${data.dynamicRange.development}`,
+      `NOISE REDUCTION: ${formatNoiseReduction(data)}`,
+    ],
+  );
 
   if (data.highlight || data.shadow) {
-    lines.push(abbreviate
-      ? `HIGH${addSign(data.highlight)} SHAD${addSign(data.shadow)}`
-      : `HIGHLIGHT ${addSign(data.highlight)} SHADOW ${addSign(data.shadow)}`,
+    lines.push(...abbreviate
+      ? [`HIGH${addSign(data.highlight)} SHAD${addSign(data.shadow)}`]
+      : [
+        `HIGHLIGHT: ${addSign(data.highlight)}`,
+        `SHADOW: ${addSign(data.shadow)}`,
+      ],
     );
   }
-  lines.push(abbreviate
+  lines.push(...abbreviate
     // eslint-disable-next-line max-len
-    ? `COL${addSign(data.color)} SHARP${addSign(data.sharpness)} CLAR${addSign(data.clarity)}`
-    // eslint-disable-next-line max-len
-    : `COLOR ${addSign(data.color)} SHARPEN ${addSign(data.sharpness)} CLARITY ${addSign(data.clarity)}`,
+    ? [`COL${addSign(data.color)} SHARP${addSign(data.sharpness)} CLAR${addSign(data.clarity)}`]
+    : [
+      `COLOR: ${addSign(data.color)}`,
+      `SHARPEN: ${addSign(data.sharpness)}`,
+      `CLARITY: ${addSign(data.clarity)}`,
+    ],
   );
   if (data.colorChromeEffect) {
     lines.push(abbreviate
       ? `CHROME ${data.colorChromeEffect.toLocaleUpperCase()}`
-      : `COLOR CHROME ${data.colorChromeEffect.toLocaleUpperCase()}`,
+      : `COLOR CHROME: ${data.colorChromeEffect.toLocaleUpperCase()}`,
     );
   }
   if (data.colorChromeFXBlue) {
     lines.push(abbreviate
       ? `FX BLUE ${data.colorChromeFXBlue.toLocaleUpperCase()}`
-      : `CHROME FX BLUE ${data.colorChromeFXBlue.toLocaleUpperCase()}`,
+      : `CHROME FX BLUE: ${data.colorChromeFXBlue.toLocaleUpperCase()}`,
     );
   }
   if (data.grainEffect.roughness !== 'off') {
-    lines.push(`GRAIN ${formatGrain(data, abbreviate)}`);
+    lines.push(abbreviate
+      ? `GRAIN ${formatGrain(data, abbreviate)}`
+      : `GRAIN: ${formatGrain(data, abbreviate)}`,
+    );
   }
   if (data.bwAdjustment || data.bwMagentaGreen) {
-    lines.push(abbreviate
-      ? `BW ADJ${addSign(data.bwAdjustment)} M/G${addSign(data.bwMagentaGreen)}`
+    lines.push(...abbreviate
       // eslint-disable-next-line max-len
-      : `BW ADJUSTMENT ${addSign(data.bwAdjustment)} MAGENTA/GREEN ${addSign(data.bwMagentaGreen)}`,
+      ? [`BW ADJ${addSign(data.bwAdjustment)} M/G${addSign(data.bwMagentaGreen)}`]
+      : [
+        `BW ADJUSTMENT: ${addSign(data.bwAdjustment)}`,
+        `MAGENTA/GREEN: ${addSign(data.bwMagentaGreen)}`,
+      ],
     );
   }
 
@@ -115,6 +130,10 @@ abbreviate?: boolean,
     ? [formatRecipe(title).toLocaleUpperCase(),'–', ...lines] 
     : lines;
 };
+
+export const generateRecipeText = (
+  ...args: Parameters<typeof generateRecipeLines>
+) => generateRecipeLines(...args).join('\n');
 
 export const generateMetaForRecipe = (
   recipe: string,
@@ -132,13 +151,28 @@ export const generateMetaForRecipe = (
 const photoHasRecipe = (photo?: Photo) =>
   photo?.film && photo?.recipeData;
 
-export const getPhotoWithRecipeFromPhotos = (
+const getPhotoWithRecipeFromPhotos = (
   photos: Photo[],
   preferredPhoto?: Photo,
 ) =>
   photoHasRecipe(preferredPhoto)
     ? preferredPhoto
     : photos.find(photoHasRecipe);
+
+export const getRecipePropsFromPhotos = (
+  ...args: Parameters<typeof getPhotoWithRecipeFromPhotos>
+): RecipeProps | undefined => {
+  const photo = getPhotoWithRecipeFromPhotos(...args);
+  return photo?.recipeData && photo?.film
+    ? {
+      title: photo.recipeTitle,
+      data: photo.recipeData,
+      film: photo.film,
+      iso: photo.isoFormatted,
+      exposure: photo.exposureTimeFormatted,
+    }
+    : undefined;
+};
 
 export const sortRecipes = (recipes: Recipes = []) =>
   recipes.sort((a, b) => a.recipe.localeCompare(b.recipe));
@@ -151,7 +185,7 @@ export const convertRecipesForForm = (recipes: Recipes = []) =>
       annotationAria: formatCountDescriptive(count),
     }));
 
-export const addSign = (value = 0) => value < 0 ? value : `+${value}`;
+export const addSign = (value = 0) => value < 0 ? `${value}` : `+${value}`;
 
 export const formatWhiteBalance = ({ whiteBalance }: FujifilmRecipe) =>
   whiteBalance.type === 'kelvin' && whiteBalance.colorTemperature
@@ -160,12 +194,10 @@ export const formatWhiteBalance = ({ whiteBalance }: FujifilmRecipe) =>
       .replace(/auto./i, '')
       .replaceAll('-', ' ');
 
-export const formatWhiteBalanceColor = ({
-  whiteBalance: { red, blue },
-}: FujifilmRecipe) =>
-  (red || blue)
-    ? `R${addSign(red)}/B${addSign(blue)}`
-    : '';
+export const formatWhiteBalanceColor = (
+  { whiteBalance: { red, blue } }: FujifilmRecipe,
+) =>
+  `R${addSign(red)}/B${addSign(blue)}`;
 
 export const formatGrain = (
   { grainEffect }: FujifilmRecipe,
