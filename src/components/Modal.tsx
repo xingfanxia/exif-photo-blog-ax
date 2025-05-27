@@ -61,14 +61,17 @@ export default function Modal({
     },
   });
 
-  useEscapeHandler(onClose, true);
+  useEscapeHandler({
+    onKeyDown: onClose,
+    ignoreShouldRespondToKeyboardCommands: true,
+  });
 
   return (
     <motion.div
       className={clsx(
         'fixed inset-0 z-50 flex justify-center',
         anchor === 'top'
-          ? 'items-start pt-4 sm:pt-24'
+          ? 'items-start pt-4 sm:pt-12 lg:pt-24'
           : 'items-center',
         'bg-white dark:bg-black',
       )}
@@ -79,7 +82,7 @@ export default function Modal({
         : false}
       animate={{ backgroundColor: resolvedTheme === 'dark'
         ? 'rgba(0, 0, 0, 0.80)'
-        : 'rgba(255, 255, 255, 0.80)' }}
+        : 'rgba(255, 255, 255, 0.90)' }}
       transition={{ duration: 0.3, easing: 'easeOut' }}
     >
       <AnimateItems
@@ -88,11 +91,14 @@ export default function Modal({
           ref={contentRef}
           key="modalContent"
           className={clsx(
-            container && 'w-[calc(100vw-1.5rem)] sm:w-[min(540px,90vw)]',
-            container && !noPadding && 'p-3 md:p-4',
-            container && 'rounded-lg md:rounded-xl border-medium',
-            container && 'bg-white dark:bg-black',
-            container && 'shadow-2xl/20 dark:shadow-2xl/100',
+            ...container ? [
+              'w-[calc(100vw-1.5rem)] sm:w-[min(540px,90vw)]',
+              !noPadding && 'p-2',
+              'rounded-xl outline-medium',
+              'bg-white dark:bg-black',
+              'shadow-gray-900 shadow-2xl/15',
+              'dark:shadow-black dark:shadow-2xl/100',
+            ] : [],
             className,
           )}
         >

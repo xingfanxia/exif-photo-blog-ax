@@ -135,7 +135,7 @@ export default function AdminAppInsightsClient({
   const renderTooltipContent = (content: ReactNode) =>
     <Tooltip
       content={content}
-      classNameTrigger="translate-y-[-1.5px] ml-2 h-3"
+      classNameTrigger="ml-1.5"
       supportMobile
     />;
 
@@ -289,7 +289,7 @@ export default function AdminAppInsightsClient({
                 to behave unexpectedly. Domains are stored in
                 {' '}
                 <EnvVar
-                  variable="NEXT_PUBLIC_SITE_DOMAIN"
+                  variable="NEXT_PUBLIC_DOMAIN"
                   trailingContent="."
                 />
               </>}

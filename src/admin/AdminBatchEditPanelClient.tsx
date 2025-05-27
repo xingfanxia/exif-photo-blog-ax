@@ -6,7 +6,7 @@ import AppGrid from '@/components/AppGrid';
 import { useAppState } from '@/state/AppState';
 import { clsx } from 'clsx/lite';
 import { IoCloseSharp } from 'react-icons/io5';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TAG_FAVS, Tags } from '@/tag';
 import { usePathname } from 'next/navigation';
 import { PATH_GRID_INFERRED } from '@/app/paths';
@@ -19,12 +19,15 @@ import { FaArrowDown, FaCheck } from 'react-icons/fa6';
 import ResponsiveText from '@/components/primitives/ResponsiveText';
 import IconFavs from '@/components/icons/IconFavs';
 import IconTag from '@/components/icons/IconTag';
+import { useAppText } from '@/i18n/state/client';
 
 export default function AdminBatchEditPanelClient({
   uniqueTags,
 }: {
   uniqueTags: Tags
 }) {
+  const refNote = useRef<HTMLDivElement>(null);
+
   const pathname = usePathname();
 
   const {
@@ -34,6 +37,8 @@ export default function AdminBatchEditPanelClient({
     isPerformingSelectEdit,
     setIsPerformingSelectEdit,
   } = useAppState();
+
+  const appText = useAppText();
 
   const [tags, setTags] = useState<string>();
   const [tagErrorMessage, setTagErrorMessage] = useState('');
@@ -47,6 +52,7 @@ export default function AdminBatchEditPanelClient({
 
   const photosText = photoQuantityText(
     selectedPhotoIds?.length ?? 0,
+    appText,
     false,
     false,
   );
@@ -148,15 +154,24 @@ export default function AdminBatchEditPanelClient({
       />
     </>;
 
-  return (
+  const shouldShowPanel =
     isUserSignedIn &&
     pathname === PATH_GRID_INFERRED &&
-    selectedPhotoIds !== undefined
-  )
+    selectedPhotoIds !== undefined;
+
+  useEffect(() => {
+    // Steal focus from Admin Menu to hide tooltip
+    if (shouldShowPanel) {
+      refNote.current?.focus();
+    }
+  }, [shouldShowPanel]);
+
+  return shouldShowPanel
     ? <AppGrid
       className="sticky top-0 z-10 -mt-2 pt-2"
       contentMain={<div className="flex flex-col gap-2">
         <Note
+          ref={refNote}
           color="gray"
           className={clsx(
             'min-h-[3.5rem] pr-2',

@@ -29,7 +29,7 @@ https://photos.sambecker.com
 1. Click [Deploy](https://vercel.com/new/clone?demo-title=Photo+Blog&demo-description=Store+photos+with+original+camera+data&demo-url=https%3A%2F%2Fphotos.sambecker.com&demo-image=https%3A%2F%2Fphotos.sambecker.com%2Ftemplate-image-tight&project-name=Photo+Blog&repository-name=exif-photo-blog&repository-url=https%3A%2F%2Fgithub.com%2Fsambecker%2Fexif-photo-blog&from=templates&skippable-integrations=1&teamCreateStatus=hidden&stores=%5B%7B%22type%22%3A%22postgres%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D)
 2. Add required storage ([Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres/quickstart#create-a-postgres-database) + [Vercel Blob](https://vercel.com/docs/storage/vercel-blob/quickstart#create-a-blob-store)) as part of template installation
 3. Configure environment variable for production domain in project settings
-   - `NEXT_PUBLIC_SITE_DOMAIN` (e.g., photos.domain.com—used in absolute urls and seen in navigation if no explicit nav title is set)
+   - `NEXT_PUBLIC_DOMAIN` (e.g., photos.domain.com—used in absolute urls and seen in navigation if no explicit nav title is set)
 
 ### 2. Setup Auth
 
@@ -88,6 +88,10 @@ _⚠️ READ BEFORE PROCEEDING_
      - `semantic` (default)
      - `none`
 
+#### Alternate AI providers (experimental)
+
+Set `OPENAI_BASE_URL` in order to use an alternate OpenAI-compatible provider
+
 ### Web Analytics
 
 1. Open project on Vercel
@@ -110,6 +114,7 @@ Application behavior can be changed by configuring the following environment var
 - `NEXT_PUBLIC_NAV_TITLE` (defaults to domain when not configured)
 - `NEXT_PUBLIC_NAV_CAPTION` (seen in navigation, beneath title)
 - `NEXT_PUBLIC_PAGE_ABOUT` (seen in grid sidebar—accepts rich formatting tags: `<b>`, `<strong>`, `<i>`, `<em>`, `<u>`, `<br>`)
+- `NEXT_PUBLIC_DOMAIN_SHARE` (seen in share modals where a shorter url may be desirable)
 
 #### Performance
 > ⚠️ Enabling may result in increased project usage. Static optimization [troubleshooting hints](#why-do-production-deployments-fail-when-static-optimization-is-enabled) in FAQ.
@@ -138,6 +143,7 @@ Application behavior can be changed by configuring the following environment var
      - `films` (default)
      - `focal-lengths`
 - `NEXT_PUBLIC_EXHAUSTIVE_SIDEBAR_CATEGORIES = 1` always shows expanded sidebar content
+- `NEXT_PUBLIC_HIDE_KEYBOARD_SHORTCUT_TOOLTIPS = 1` hides keyboard shortcut hints in areas like the main nav, and previous/next photo links
 - `NEXT_PUBLIC_HIDE_EXIF_DATA = 1` hides EXIF data in photo details and OG images (potentially useful for portfolios, which don't focus on photography)
 - `NEXT_PUBLIC_HIDE_ZOOM_CONTROLS = 1` hides fullscreen photo zoom controls
 - `NEXT_PUBLIC_HIDE_TAKEN_AT_TIME = 1` hides taken at time from photo meta
@@ -251,6 +257,23 @@ Vercel Postgres can be switched to another Postgres-compatible, pooling provider
 ### Supabase
 1. Ensure connection string is set to "Transaction Mode" via port `6543`
 2. Disable SSL by setting `DISABLE_POSTGRES_SSL = 1`
+
+💬 &nbsp;&nbsp;I18N
+-
+
+Partial internationalization (for non-admin, user-facing text) provided for a handful of languages. Configure locale by setting environment variable `NEXT_PUBLIC_LOCALE`.
+
+### Supported Languages
+- `us-en`
+- `es-es` (coming soon)
+- `pt-br`
+- `pt-pt`
+- `id-id`
+- `zh-cn`
+
+To add support for a new language, open a PR following instructions in [/src/i18n/index.ts](https://github.com/sambecker/exif-photo-blog/blob/main/src/i18n/index.ts), using [us-en.ts](https://github.com/sambecker/exif-photo-blog/blob/main/src/i18n/locales/us-en.ts) as reference.
+
+Thank you ❤️ translators: [@sconetto](https://github.com/sconetto) (`pt-br`, `pt-pt`), [@brandnholl](https://github.com/brandnholl) (`id-id`), [@TongEc](https://github.com/TongEc) (`zh-cn`)
 
 📖&nbsp;&nbsp;FAQ
 -

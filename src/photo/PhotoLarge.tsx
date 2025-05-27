@@ -50,6 +50,7 @@ import PhotoLens from '@/lens/PhotoLens';
 import { lensFromPhoto } from '@/lens';
 import MaskedScroll from '@/components/MaskedScroll';
 import useCategoryCountsForPhoto from '@/category/useCategoryCountsForPhoto';
+import { useAppText } from '@/i18n/state/client';
 
 export default function PhotoLarge({
   photo,
@@ -76,6 +77,7 @@ export default function PhotoLarge({
   shouldShareFocalLength,
   includeFavoriteInAdminMenu,
   onVisible,
+  showAdminKeyCommands,
 }: {
   photo: Photo
   className?: string
@@ -101,6 +103,7 @@ export default function PhotoLarge({
   shouldShareFocalLength?: boolean
   includeFavoriteInAdminMenu?: boolean
   onVisible?: () => void
+  showAdminKeyCommands?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const refZoomControls = useRef<ZoomControlsRef>(null);
@@ -113,6 +116,8 @@ export default function PhotoLarge({
     shouldDebugRecipeOverlays,
     isUserSignedIn,
   } = useAppState();
+
+  const appText = useAppText();
 
   const {
     cameraCount,
@@ -252,6 +257,7 @@ export default function PhotoLarge({
       revalidatePhoto,
       includeFavorite: includeFavoriteInAdminMenu,
       ariaLabel: `Admin menu for '${titleForPhoto(photo)}' photo`,
+      showKeyCommands: showAdminKeyCommands,
     }} />;
 
   const largePhotoContainerClassName = clsx(
@@ -284,11 +290,7 @@ export default function PhotoLarge({
       classNameSide="relative"
       contentSide={
         <div className="md:absolute inset-0 -mt-1">
-          <MaskedScroll
-            className="sticky top-4 self-start"
-            fadeHeight={36}
-            hideScrollbar
-          >
+          <MaskedScroll className="sticky top-4 self-start">
             <DivDebugBaselineGrid className={clsx(
               'grid grid-cols-2 md:grid-cols-1',
               'gap-x-0.5 sm:gap-x-1 gap-y-baseline',
@@ -379,7 +381,7 @@ export default function PhotoLarge({
                           <>
                             {' '}
                             <Tooltip
-                              content="35mm equivalent"
+                              content={appText.tooltip['35mm']}
                               sideOffset={3}
                               supportMobile
                             >
@@ -435,7 +437,7 @@ export default function PhotoLarge({
                   )}>
                     {showZoomControls &&
                       <LoaderButton
-                        title="Open Image Viewer"
+                        tooltip={appText.tooltip.zoom}
                         icon={<LuExpand size={15} />}
                         onClick={() => refZoomControls.current?.open()}
                         styleAs="link"
@@ -444,11 +446,17 @@ export default function PhotoLarge({
                       />}
                     {shouldShare &&
                       <ShareButton
-                        title="Share Photo"
+                        tooltip={appText.tooltip.sharePhoto}
                         photo={photo}
-                        tag={shouldShareTag ? primaryTag : undefined}
-                        camera={shouldShareCamera ? camera : undefined}
-                        lens={shouldShareLens ? lens : undefined}
+                        tag={shouldShareTag
+                          ? primaryTag
+                          : undefined}
+                        camera={shouldShareCamera
+                          ? camera
+                          : undefined}
+                        lens={shouldShareLens
+                          ? lens
+                          : undefined}
                         film={shouldShareFilm
                           ? photo.film
                           : undefined}

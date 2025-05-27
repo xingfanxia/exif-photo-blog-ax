@@ -44,7 +44,7 @@ import {
   extractImageDataFromBlobPath,
   propagateRecipeTitleIfNecessary,
 } from './server';
-import { TAG_FAVS, isTagFavs } from '@/tag';
+import { TAG_FAVS, isPhotoFav, isTagFavs } from '@/tag';
 import { convertPhotoToPhotoDbInsert, Photo } from '.';
 import { runAuthenticatedAdminServerAction } from '@/auth/server';
 import { AiImageQuery, getAiImageQuery } from './ai';
@@ -254,7 +254,7 @@ export const toggleFavoritePhotoAction = async (
     const photo = await getPhoto(photoId);
     if (photo) {
       const { tags } = photo;
-      photo.tags = tags.some(tag => tag === TAG_FAVS)
+      photo.tags = isPhotoFav(photo)
         ? tags.filter(tag => !isTagFavs(tag))
         : [...tags, TAG_FAVS];
       await updatePhoto(convertPhotoToPhotoDbInsert(photo));
@@ -263,6 +263,20 @@ export const toggleFavoritePhotoAction = async (
         redirect(pathForPhoto({ photo: photoId }));
       }
     }
+  });
+
+export const toggleHidePhotoAction = async (
+  photoId: string,
+  redirectPath?: string,
+) =>
+  runAuthenticatedAdminServerAction(async () => {
+    const photo = await getPhoto(photoId, true);
+    if (photo) {
+      photo.hidden = !photo.hidden;
+      await updatePhoto(convertPhotoToPhotoDbInsert(photo));
+      revalidateAllKeysAndPaths();
+    }
+    if (redirectPath) { redirect(redirectPath); }
   });
 
 export const deletePhotosAction = async (photoIds: string[]) =>

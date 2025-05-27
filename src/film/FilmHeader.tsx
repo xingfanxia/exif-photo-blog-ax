@@ -6,6 +6,8 @@ import PhotoHeader from '@/photo/PhotoHeader';
 import PhotoFilm from '@/film/PhotoFilm';
 import { getRecipePropsFromPhotos } from '@/recipe';
 import { useAppState } from '@/state/AppState';
+import { AI_TEXT_GENERATION_ENABLED } from '@/app/config';
+import { useAppText } from '@/i18n/state/client';
 
 export default function FilmHeader({
   film,
@@ -30,6 +32,8 @@ export default function FilmHeader({
     ? getRecipePropsFromPhotos(photos, selectedPhoto)
     : undefined;
 
+  const appText = useAppText();
+
   return (
     <PhotoHeader
       film={film}
@@ -41,12 +45,18 @@ export default function FilmHeader({
           : undefined}
       />}
       entityDescription={descriptionForFilmPhotos(
-        photos, undefined, count, dateRange)}
+        photos,
+        appText,
+        undefined,
+        count,
+        dateRange,
+      )}
       photos={photos}
       selectedPhoto={selectedPhoto}
       indexNumber={indexNumber}
       count={count}
       dateRange={dateRange}
+      hasAiTextGeneration={AI_TEXT_GENERATION_ENABLED}
       includeShareButton
     />
   );

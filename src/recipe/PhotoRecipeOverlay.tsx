@@ -19,6 +19,7 @@ import { TbChecklist } from 'react-icons/tb';
 import CopyButton from '@/components/CopyButton';
 import { labelForFilm } from '@/film';
 import PhotoRecipe from './PhotoRecipe';
+import { useAppText } from '@/i18n/state/client';
 
 export default function PhotoRecipeOverlay({
   ref,
@@ -45,6 +46,8 @@ export default function PhotoRecipeOverlay({
     bwAdjustment,
     bwMagentaGreen,
   } = data;
+
+  const appText = useAppText();
 
   const whiteBalanceTypeFormatted = formatWhiteBalance(data);
 
@@ -98,7 +101,7 @@ export default function PhotoRecipeOverlay({
         'z-10',
         'w-[20rem] p-3 space-y-3',
         'scroll-mt-8',
-        'rounded-lg',
+        'rounded-[10px]',
         isOnPhoto
           ? 'shadow-2xl'
           // Soften shadow to mimic <Modal />
@@ -134,11 +137,11 @@ export default function PhotoRecipeOverlay({
           text={generateRecipeText({ title, data, film })}
           iconSize={17}
           className={clsx(
-            'translate-y-[1.5px]',
+            'translate-y-[-1.5px]',
             'text-black/40 active:text-black/75',
             'hover:text-black/40',
           )}
-          tooltip="Copy recipe text"
+          tooltip={appText.tooltip.recipeCopy}
           tooltipColor="frosted"
         />
         <span>

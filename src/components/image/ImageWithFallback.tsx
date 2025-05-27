@@ -32,11 +32,10 @@ export default function ImageWithFallback({
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    const timeout = setTimeout(
-      () => setWasCached(imgRef.current?.complete ?? false),
-      100,
+    setWasCached(
+      Boolean(imgRef.current?.complete) &&
+      (imgRef.current?.naturalWidth ?? 0) > 0,
     );
-    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
