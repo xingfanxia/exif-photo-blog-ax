@@ -15,6 +15,11 @@
   }
 }
 
+html {
+  /* Necessary for nextjs scroll restoration */
+  min-height: 100%;
+}
+
 @theme {
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
@@ -162,11 +167,11 @@
 }
 @utility bg-medium {
   @apply
-    bg-gray-200 dark:bg-gray-700
+    bg-gray-200 dark:bg-gray-700/65
 }
 @utility bg-dim {
   @apply
-    bg-gray-100 dark:bg-gray-900/75
+    bg-gray-100 dark:bg-gray-800/70
 }
 @utility bg-extra-dim {
   @apply
