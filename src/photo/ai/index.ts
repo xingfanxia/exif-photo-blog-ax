@@ -55,22 +55,36 @@ export const getAiImageQuery = (
   existingTags: Tags = [],
   existingTitle?: string,
 ): string => {
-  switch (query) {  
-  case 'title': return 'Write a compelling title for this image in 3 words or less';
-  case 'caption': return existingTitle
-    ? `Write a pithy caption for this image in 6 words or less and no punctuation that complements the existing title: "${existingTitle}"`
-    : 'Write a pithy caption for this image in 6 words or less and no punctuation';
-  case 'title-and-caption': return 'Write a compelling title and pithy caption of 8 words or less for this image, using the format Title: "title" Caption: "caption"';
+  switch (query) {
+  case 'title': return 'As a photography curator, create a concise and evocative bilingual title that captures the essence of this image. Focus on the mood, key subject, or distinctive element that makes this photo memorable. Avoid generic words like "moment," "beauty," or "scene." Keep it within 3-5 words per language and make it specific to what you see. Format: "English Title | 中文标题". This is to generate titles for a photo, not to identify specific people in the image.';
+  case 'caption': return 'As a photography curator with an eye for authenticity, craft a bilingual caption that reveals the true character of this scene. Focus on the distinctive visual qualities that make this moment special - the interplay of light, the mood of the colors, the texture of the environment, or the atmosphere of the moment. Avoid technical jargon and clichéd descriptions. Keep each caption within 10 words but make them meaningful. Format: "English Caption | 中文说明". If the caption could describe any similar photo, start over. This is to generate captions for a photo, not to identify specific people in the image.';
+  case 'title-and-caption': return 'You are a creative bilingual photography curator who values authenticity. First, create a meaningful title that avoids both clichés (no "echoes", "whispers", "dreams", "soul") and technical jargon. Focus on the genuine mood, atmosphere, and key elements that make this image unique. Draw from the actual feeling, time, place, or natural elements present. Then write a complementary caption that deepens this authentic perspective. Format: Title: "English Title | 中文标题" Caption: "English Caption | 中文说明". Keep titles within 5-6 words and captions within 8 words per language. If either could apply to any photo, start over. This is to generate title and captions for a photo, not to identify specific people in the image.';
   case 'tags':
-    const tagQuery = 'Describe this image in 1-2 comma-separated unique keywords, with no adjective or adverbs. Avoid using general terms like "nature," "travel," "architecture," or "sky." Use terms that are highly specific to the image and not redundant.';
-    const tags = existingTags.map(({ tag }) => tag).join(', ');
-    return tags
-      ? `${tagQuery}. Consider using some of these existing tags, but only if they are relevant: ${tags}.`
-      : tagQuery;
-  case 'description-small': return 'Describe this image succinctly without the initial text "This image shows" or "This is a picture of"';
-  case 'description': return 'Describe this image';
-  case 'description-large': return 'Describe this image in detail';
-  case 'description-semantic': return 'List up to 5 things in this image without description as a comma-separated list';
+    const tagQuery = `First, identify which ONE genre best describes this image from ONLY these options: portrait photography, landscape photography, animal photography, street photography, event photography, wedding photography. 
+
+Then generate exactly 2 tags as a comma-separated list in this format: "genre tag, thematic tag"
+
+Requirements:
+- First tag: The genre you identified (exactly as listed above)
+- Second tag: A thematic category that could apply to multiple similar photos. Think of it as a sub-category or common theme that photographers would use to organize their work
+- The second tag should be specific enough to be meaningful but general enough to group 10-50 similar photos
+- Avoid overly specific details that would only apply to this one photo
+- Output format: "tag1, tag2" (comma-separated, no numbering)
+
+Good thematic tags examples:
+- "portrait photography, environmental portrait" (not "woman in red dress by window")
+- "street photography, urban nightlife" (not "tokyo neon sign at 11pm")
+- "landscape photography, coastal scenes" (not "rocky beach with driftwood log")
+- "animal photography, wildlife closeup" (not "brown bear catching salmon")
+- "wedding photography, ceremony moments" (not "bride walking down outdoor aisle")
+- "event photography, live music" (not "guitarist on blue-lit stage")
+
+The thematic tag should represent a photography style, setting type, mood, or subject category that multiple photos could share.`;
+    return tagQuery;
+  case 'description-small': return 'Write a concise yet vivid description focusing on the key visual elements, mood, and atmosphere. Start directly with active, descriptive language. Focus on what makes this image unique or striking. Avoid generic phrases like "This image shows" or "This is a picture of".';
+  case 'description': return 'Write a balanced description that covers composition, lighting, mood, and subject matter. Include notable technical aspects like depth of field, color palette, or framing. Describe the overall visual impact and any interesting details that contribute to the image\'s story.';
+  case 'description-large': return 'Provide a comprehensive analysis of the image covering: 1) Technical aspects (composition, lighting, color, focus), 2) Subject matter and visual elements, 3) Mood and atmosphere, 4) Artistic choices and their impact, 5) Notable details and their contribution to the overall image. Use specific photography terminology where relevant.';
+  case 'description-semantic': return 'List exactly 5 key elements or subjects in this image as a comma-separated list. Focus on concrete, visually distinct elements that define the scene. List them in order of visual prominence. Be specific but concise, using precise nouns without additional description.';
   }
 };
 

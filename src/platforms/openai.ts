@@ -14,7 +14,7 @@ import { cleanUpAiTextResponse } from '@/photo/ai';
 const redis = HAS_REDIS_STORAGE ? Redis.fromEnv() : undefined;
 
 const RATE_LIMIT_IDENTIFIER = 'openai-image-query';
-const MODEL = 'gpt-4o';
+const MODEL = 'o4-mini';
 
 const openai = AI_TEXT_GENERATION_ENABLED
   ? createOpenAI({

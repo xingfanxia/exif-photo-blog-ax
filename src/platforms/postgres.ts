@@ -4,7 +4,11 @@ import { Pool, QueryResult, QueryResultRow } from 'pg';
 
 const pool = new Pool({
   connectionString: removeParamsFromUrl(process.env.POSTGRES_URL, ['sslmode']),
-  ...POSTGRES_SSL_ENABLED && { ssl: true },
+  ...POSTGRES_SSL_ENABLED && { 
+    ssl: {
+      rejectUnauthorized: false,
+    }
+  },
 });
 
 export type Primitive = string | number | boolean | undefined | null;
