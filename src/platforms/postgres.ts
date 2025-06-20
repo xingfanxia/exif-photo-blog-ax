@@ -3,13 +3,12 @@ import { removeParamsFromUrl } from '@/utility/url';
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 
 const pool = new Pool({
-  ...process.env.POSTGRES_URL && {
-    connectionString: removeParamsFromUrl(
-      process.env.POSTGRES_URL,
-      ['sslmode'],
-    ),
+  connectionString: removeParamsFromUrl(process.env.POSTGRES_URL, ['sslmode']),
+  ...POSTGRES_SSL_ENABLED && { 
+    ssl: {
+      rejectUnauthorized: false,
+    }
   },
-  ...POSTGRES_SSL_ENABLED && { ssl: true },
 });
 
 export type Primitive = string | number | boolean | undefined | null;
