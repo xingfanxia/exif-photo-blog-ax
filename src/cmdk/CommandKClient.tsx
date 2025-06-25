@@ -49,12 +49,19 @@ import { getKeywordsForPhoto, titleForPhoto } from '@/photo';
 import PhotoDate from '@/photo/PhotoDate';
 import PhotoSmall from '@/photo/PhotoSmall';
 import { FaCheck } from 'react-icons/fa6';
-import { addHiddenToTags, formatTag, isTagFavs, isTagHidden } from '@/tag';
+import {
+  addHiddenToTags,
+  formatTag,
+  isTagFavs,
+  isTagHidden,
+  limitTagsByCount,
+} from '@/tag';
 import { formatCount, formatCountDescriptive } from '@/utility/string';
 import CommandKItem from './CommandKItem';
 import {
   CATEGORY_VISIBILITY,
   GRID_HOMEPAGE_ENABLED,
+  HIDE_TAGS_WITH_ONE_PHOTO,
 } from '@/app/config';
 import { DialogDescription, DialogTitle } from '@radix-ui/react-dialog';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
@@ -118,14 +125,12 @@ const renderToggle = (
 export default function CommandKClient({
   cameras,
   lenses,
-  tags,
+  tags: _tags,
   recipes,
   films,
   focalLengths,
-  showDebugTools,
   footer,
 }: {
-  showDebugTools?: boolean
   footer?: string
 } & PhotoSetCategories) {
   const pathname = usePathname();
@@ -136,7 +141,7 @@ export default function CommandKClient({
     isCommandKOpen: isOpen,
     startUpload,
     photosCountTotal,
-    photosCountHidden,
+    photosCountHidden = 0,
     uploadsCount,
     tagsCount,
     recipesCount,
@@ -146,6 +151,7 @@ export default function CommandKClient({
     isGridHighDensity,
     areZoomControlsShown,
     arePhotosMatted,
+    areAdminDebugToolsEnabled,
     shouldShowBaselineGrid,
     shouldDebugImageFallbacks,
     shouldDebugInsights,
@@ -283,9 +289,14 @@ export default function CommandKClient({
     }
   }, [isOpen]);
 
-  const tagsIncludingHidden = useMemo(() =>
-    addHiddenToTags(tags, photosCountHidden)
-  , [tags, photosCountHidden]);
+  const tags = useMemo(() => {
+    const tagsIncludingHidden = photosCountHidden > 0
+      ? addHiddenToTags(_tags, photosCountHidden)
+      : _tags;
+    return HIDE_TAGS_WITH_ONE_PHOTO
+      ? limitTagsByCount(tagsIncludingHidden, 2, queryLive)
+      : tagsIncludingHidden;
+  }, [_tags, photosCountHidden, queryLive]);
 
   const categorySections: CommandKSection[] = useMemo(() =>
     CATEGORY_VISIBILITY
@@ -318,7 +329,7 @@ export default function CommandKClient({
             size={13}
             className="translate-x-[1px] translate-y-[0.75px]"
           />,
-          items: tagsIncludingHidden.map(({ tag, count }) => ({
+          items: tags.map(({ tag, count }) => ({
             explicitKey: formatTag(tag),
             label: <span className="flex items-center gap-[7px]">
               {formatTag(tag)}
@@ -366,7 +377,7 @@ export default function CommandKClient({
           heading: appText.category.focalLengthPlural,
           accessory: <IconFocalLength className="text-[14px]" />,
           items: focalLengths.map(({ focal, count }) => ({
-            label: formatFocalLength(focal)!,
+            label: formatFocalLength(focal),
             annotation: formatCount(count),
             annotationAria: formatCountDescriptive(count),
             path: pathForFocalLength(focal),
@@ -377,7 +388,7 @@ export default function CommandKClient({
       .filter(Boolean) as CommandKSection[]
   , [
     appText,
-    tagsIncludingHidden,
+    tags,
     cameras,
     lenses,
     recipes,
@@ -406,7 +417,7 @@ export default function CommandKClient({
     }],
   }];
 
-  if (isUserSignedIn && showDebugTools) {
+  if (isUserSignedIn && areAdminDebugToolsEnabled) {
     clientSections.push({
       heading: 'Debug Tools',
       accessory: <RiToolsFill size={16} className="translate-x-[-1px]" />,
@@ -537,7 +548,7 @@ export default function CommandKClient({
       annotation: <IconLock narrow />,
       path: PATH_ADMIN_CONFIGURATION,
     });
-    if (showDebugTools) {
+    if (areAdminDebugToolsEnabled) {
       adminSection.items.push({
         label: 'Baseline Overview',
         annotation: <BiLockAlt />,

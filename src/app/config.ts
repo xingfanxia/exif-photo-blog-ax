@@ -240,23 +240,7 @@ export const IMAGE_QUALITY =
 export const BLUR_ENABLED =
   process.env.NEXT_PUBLIC_BLUR_DISABLED !== '1';
 
-
-// VISUAL
-
-export const DEFAULT_THEME =
-  process.env.NEXT_PUBLIC_DEFAULT_THEME === 'dark'
-    ? 'dark'
-    : process.env.NEXT_PUBLIC_DEFAULT_THEME === 'light'
-      ? 'light'
-      : 'system';
-export const MATTE_PHOTOS =
-  process.env.NEXT_PUBLIC_MATTE_PHOTOS === '1';
-export const MATTE_COLOR =
-  process.env.NEXT_PUBLIC_MATTE_COLOR;
-export const MATTE_COLOR_DARK =
-  process.env.NEXT_PUBLIC_MATTE_COLOR_DARK;
-
-// DISPLAY
+// CATEGORIES
 
 export const CATEGORY_VISIBILITY = getOrderedCategoriesFromString(
   process.env.NEXT_PUBLIC_CATEGORY_VISIBILITY);
@@ -274,10 +258,17 @@ export const SHOW_FOCAL_LENGTHS =
   CATEGORY_VISIBILITY.includes('focal-lengths');
 export const COLLAPSE_SIDEBAR_CATEGORIES =
   process.env.NEXT_PUBLIC_EXHAUSTIVE_SIDEBAR_CATEGORIES !== '1';
+export const HIDE_TAGS_WITH_ONE_PHOTO =
+  process.env.NEXT_PUBLIC_HIDE_TAGS_WITH_ONE_PHOTO === '1';
+
+// DISPLAY
+
 export const SHOW_KEYBOARD_SHORTCUT_TOOLTIPS =
   process.env.NEXT_PUBLIC_HIDE_KEYBOARD_SHORTCUT_TOOLTIPS !== '1';
 export const SHOW_EXIF_DATA =
   process.env.NEXT_PUBLIC_HIDE_EXIF_DATA !== '1';
+export const SHOW_CATEGORY_IMAGE_HOVERS =
+  process.env.NEXT_PUBLIC_CATEGORY_IMAGE_HOVERS === '1';
 export const SHOW_ZOOM_CONTROLS =
   process.env.NEXT_PUBLIC_HIDE_ZOOM_CONTROLS !== '1';
 export const SHOW_TAKEN_AT_TIME =
@@ -300,6 +291,21 @@ export const PREFERS_LOW_DENSITY_GRID =
 export const HIGH_DENSITY_GRID =
   GRID_ASPECT_RATIO <= 1 &&
   !PREFERS_LOW_DENSITY_GRID;
+
+// DESIGN
+
+export const DEFAULT_THEME =
+process.env.NEXT_PUBLIC_DEFAULT_THEME === 'dark'
+  ? 'dark'
+  : process.env.NEXT_PUBLIC_DEFAULT_THEME === 'light'
+    ? 'light'
+    : 'system';
+export const MATTE_PHOTOS =
+process.env.NEXT_PUBLIC_MATTE_PHOTOS === '1';
+export const MATTE_COLOR =
+process.env.NEXT_PUBLIC_MATTE_COLOR;
+export const MATTE_COLOR_DARK =
+process.env.NEXT_PUBLIC_MATTE_COLOR_DARK;
 
 // SETTINGS
 
@@ -387,22 +393,16 @@ export const APP_CONFIGURATION = {
   hasImageQuality: Boolean(process.env.NEXT_PUBLIC_IMAGE_QUALITY),
   imageQuality: IMAGE_QUALITY,
   isBlurEnabled: BLUR_ENABLED,
-  // Visual
-  hasDefaultTheme: Boolean(process.env.NEXT_PUBLIC_DEFAULT_THEME),
-  defaultTheme: DEFAULT_THEME,
-  arePhotosMatted: MATTE_PHOTOS,
-  arePhotoMatteColorsConfigured:
-    Boolean(MATTE_COLOR) ||
-    Boolean(MATTE_COLOR_DARK),
-  matteColor: MATTE_COLOR,
-  matteColorDark: MATTE_COLOR_DARK,
-  // Display
+  // Categories
   hasCategoryVisibility:
     Boolean(process.env.NEXT_PUBLIC_CATEGORY_VISIBILITY),
   categoryVisibility: CATEGORY_VISIBILITY,
   collapseSidebarCategories: COLLAPSE_SIDEBAR_CATEGORIES,
+  hideTagsWithOnePhoto: HIDE_TAGS_WITH_ONE_PHOTO,
+  // Display
   showKeyboardShortcutTooltips: SHOW_KEYBOARD_SHORTCUT_TOOLTIPS,
   showExifInfo: SHOW_EXIF_DATA,
+  showCategoryImageHover: SHOW_CATEGORY_IMAGE_HOVERS,
   showZoomControls: SHOW_ZOOM_CONTROLS,
   showTakenAtTimeHidden: SHOW_TAKEN_AT_TIME,
   showSocial: SHOW_SOCIAL,
@@ -414,6 +414,15 @@ export const APP_CONFIGURATION = {
   hasHighGridDensity: HIGH_DENSITY_GRID,
   hasGridDensityPreference:
     Boolean(process.env.NEXT_PUBLIC_SHOW_LARGE_THUMBNAILS),
+  // Design
+  hasDefaultTheme: Boolean(process.env.NEXT_PUBLIC_DEFAULT_THEME),
+  defaultTheme: DEFAULT_THEME,
+  arePhotosMatted: MATTE_PHOTOS,
+  arePhotoMatteColorsConfigured:
+    Boolean(MATTE_COLOR) ||
+    Boolean(MATTE_COLOR_DARK),
+  matteColor: MATTE_COLOR,
+  matteColorDark: MATTE_COLOR_DARK,
   // Settings
   isGeoPrivacyEnabled: GEO_PRIVACY_ENABLED,
   arePublicDownloadsEnabled: ALLOW_PUBLIC_DOWNLOADS,

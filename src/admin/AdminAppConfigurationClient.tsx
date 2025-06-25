@@ -33,6 +33,7 @@ import { AI_AUTO_GENERATED_FIELDS_ALL } from '@/photo/ai';
 import clsx from 'clsx/lite';
 import Link from 'next/link';
 import { PATH_FEED_JSON, PATH_RSS_XML } from '@/app/paths';
+import { FaListUl } from 'react-icons/fa6';
 
 export default function AdminAppConfigurationClient({
   // Storage
@@ -79,19 +80,15 @@ export default function AdminAppConfigurationClient({
   hasImageQuality,
   imageQuality,
   isBlurEnabled,
-  // Visual
-  hasDefaultTheme,
-  defaultTheme,
-  arePhotosMatted,
-  arePhotoMatteColorsConfigured,
-  matteColor,
-  matteColorDark,
-  // Display
+  // Categories
   categoryVisibility,
   hasCategoryVisibility,
   collapseSidebarCategories,
+  hideTagsWithOnePhoto,
+  // Display
   showKeyboardShortcutTooltips,
   showExifInfo,
+  showCategoryImageHover,
   showZoomControls,
   showTakenAtTimeHidden,
   showSocial,
@@ -102,6 +99,13 @@ export default function AdminAppConfigurationClient({
   hasGridAspectRatio,
   hasHighGridDensity,
   hasGridDensityPreference,
+  // Design
+  hasDefaultTheme,
+  defaultTheme,
+  arePhotosMatted,
+  arePhotoMatteColorsConfigured,
+  matteColor,
+  matteColorDark,
   // Settings
   isGeoPrivacyEnabled,
   arePublicDownloadsEnabled,
@@ -113,8 +117,6 @@ export default function AdminAppConfigurationClient({
   areAdminDebugToolsEnabled,
   isAdminDbOptimizeEnabled,
   isAdminSqlDebugEnabled,
-  // Misc
-  baseUrl,
   // Connection status
   databaseError,
   storageError,
@@ -401,7 +403,7 @@ export default function AdminAppConfigurationClient({
         <ChecklistGroup
           title="AI text generation"
           titleShort="AI"
-          icon={<HiSparkles />}
+          icon={<HiSparkles size={14} />}
           optional
         >
           <ChecklistRow
@@ -470,7 +472,7 @@ export default function AdminAppConfigurationClient({
         </ChecklistGroup>
         <ChecklistGroup
           title="Performance"
-          icon={<RiSpeedMiniLine size={18} />}
+          icon={<RiSpeedMiniLine size={19} />}
           optional
         >
           <ChecklistRow
@@ -530,66 +532,12 @@ export default function AdminAppConfigurationClient({
           </ChecklistRow>
         </ChecklistGroup>
         <ChecklistGroup
-          title="Visual"
-          icon={<PiPaintBrushHousehold size={19} />}
+          title="Categories"
+          icon={<FaListUl size={14} />}
           optional
         >
           <ChecklistRow
-            title={`Default theme: ${defaultTheme}`}
-            status={hasDefaultTheme}
-            optional
-          >
-            {'Set environment variable to \'light\' or \'dark\''}
-            {' '}
-            to configure initial theme
-            {' '}
-            (defaults to {'\'system\''}):
-            {renderEnvVars(['NEXT_PUBLIC_DEFAULT_THEME'])}
-          </ChecklistRow>
-          <ChecklistRow
-            title="Photo matting"
-            status={arePhotosMatted}
-            optional
-          >
-            Set environment variable to {'"1"'} to constrain the size
-            {' '}
-            of each photo, and display a surrounding border:
-            <div className="pt-1 flex flex-col gap-1">
-              <EnvVar variable="NEXT_PUBLIC_MATTE_PHOTOS" />
-            </div>
-          </ChecklistRow>
-          <ChecklistRow
-            title="Custom photo matting colors"
-            status={arePhotoMatteColorsConfigured}
-            optional
-          >
-            Set environment variable hex values (e.g., #cccccc)
-            to override matte colors:
-            <div className="pt-1 flex flex-col gap-1">
-              <EnvVar
-                variable="NEXT_PUBLIC_MATTE_COLOR"
-                accessory={matteColor && <span
-                  className="size-[15px] border-medium rounded-sm ml-1"
-                  style={{ backgroundColor: matteColor }}
-                />}
-              />
-              <EnvVar
-                variable="NEXT_PUBLIC_MATTE_COLOR_DARK"
-                accessory={matteColorDark && <span
-                  className="size-[15px] border-medium rounded-sm ml-1"
-                  style={{ backgroundColor: matteColorDark }}
-                />}
-              />
-            </div>
-          </ChecklistRow>
-        </ChecklistGroup>
-        <ChecklistGroup
-          title="Display"
-          icon={<BiHide size={18} />}
-          optional
-        >
-          <ChecklistRow
-            title="Category visibility"
+            title="Visibility and ordering"
             status={hasCategoryVisibility}
             optional
           >
@@ -624,7 +572,7 @@ export default function AdminAppConfigurationClient({
             {renderEnvVars(['NEXT_PUBLIC_CATEGORY_VISIBILITY'])}
           </ChecklistRow>
           <ChecklistRow
-            title="Collapse sidebar categories"
+            title="Collapsable sidebar"
             status={collapseSidebarCategories}
             optional
           >
@@ -632,6 +580,21 @@ export default function AdminAppConfigurationClient({
             expanded category content
             {renderEnvVars(['NEXT_PUBLIC_EXHAUSTIVE_SIDEBAR_CATEGORIES'])}
           </ChecklistRow>
+          <ChecklistRow
+            title="Hide tags with only 1 photo"
+            status={hideTagsWithOnePhoto}
+            optional
+          >
+            Set environment variable to {'"1"'} to only show tags
+            with 2 or more photos
+            {renderEnvVars(['NEXT_PUBLIC_HIDE_TAGS_WITH_ONE_PHOTO'])}
+          </ChecklistRow>
+        </ChecklistGroup>
+        <ChecklistGroup
+          title="Display"
+          icon={<BiHide size={18} />}
+          optional
+        >
           <ChecklistRow
             title="Show keyboard shortcut tooltips"
             status={showKeyboardShortcutTooltips}
@@ -648,6 +611,25 @@ export default function AdminAppConfigurationClient({
           >
             Set environment variable to {'"1"'} to hide EXIF data:
             {renderEnvVars(['NEXT_PUBLIC_HIDE_EXIF_DATA'])}
+          </ChecklistRow>
+          <ChecklistRow
+            title="Show category image hovers"
+            status={showCategoryImageHover}
+            optional
+          >
+            <div className="flex flex-col gap-2">
+              <div>
+                Set environment variable to {'"1"'} to show images when hovering
+                over category links like cameras and lenses:
+                {renderEnvVars(['NEXT_PUBLIC_CATEGORY_IMAGE_HOVERS'])}
+              </div>
+              <div>
+                Static optimization strongly recommended
+                for responsive hover interactions:
+                {/* eslint-disable-next-line max-len */}
+                {renderEnvVars(['NEXT_PUBLIC_STATICALLY_OPTIMIZE_PHOTO_CATEGORY_OG_IMAGES'])}
+              </div>
+            </div>
           </ChecklistRow>
           <ChecklistRow
             title="Show zoom controls"
@@ -719,6 +701,60 @@ export default function AdminAppConfigurationClient({
             on photo grid views (if not configured, density is based on
             aspect ratio):
             {renderEnvVars(['NEXT_PUBLIC_SHOW_LARGE_THUMBNAILS'])}
+          </ChecklistRow>
+        </ChecklistGroup>
+        <ChecklistGroup
+          title="Design"
+          icon={<PiPaintBrushHousehold size={19} />}
+          optional
+        >
+          <ChecklistRow
+            title={`Default theme: ${defaultTheme}`}
+            status={hasDefaultTheme}
+            optional
+          >
+            {'Set environment variable to \'light\' or \'dark\''}
+            {' '}
+            to configure initial theme
+            {' '}
+            (defaults to {'\'system\''}):
+            {renderEnvVars(['NEXT_PUBLIC_DEFAULT_THEME'])}
+          </ChecklistRow>
+          <ChecklistRow
+            title="Photo matting"
+            status={arePhotosMatted}
+            optional
+          >
+            Set environment variable to {'"1"'} to constrain the size
+            {' '}
+            of each photo, and display a surrounding border:
+            <div className="pt-1 flex flex-col gap-1">
+              <EnvVar variable="NEXT_PUBLIC_MATTE_PHOTOS" />
+            </div>
+          </ChecklistRow>
+          <ChecklistRow
+            title="Custom photo matting colors"
+            status={arePhotoMatteColorsConfigured}
+            optional
+          >
+            Set environment variable hex values (e.g., #cccccc)
+            to override matte colors:
+            <div className="pt-1 flex flex-col gap-1">
+              <EnvVar
+                variable="NEXT_PUBLIC_MATTE_COLOR"
+                accessory={matteColor && <span
+                  className="size-[15px] border-medium rounded-sm ml-1"
+                  style={{ backgroundColor: matteColor }}
+                />}
+              />
+              <EnvVar
+                variable="NEXT_PUBLIC_MATTE_COLOR_DARK"
+                accessory={matteColorDark && <span
+                  className="size-[15px] border-medium rounded-sm ml-1"
+                  style={{ backgroundColor: matteColorDark }}
+                />}
+              />
+            </div>
           </ChecklistRow>
         </ChecklistGroup>
         <ChecklistGroup
@@ -813,16 +849,6 @@ export default function AdminAppConfigurationClient({
           Changes to environment variables require a redeploy
           or reboot of local dev server
         </div>
-        {!simplifiedView &&
-          <div className="text-dim before:content-['—']">
-            <div className="flex whitespace-nowrap">
-              <span className="font-bold">Domain</span>
-              &nbsp;&nbsp;
-              <span className="w-full flex overflow-x-auto">
-                {baseUrl || 'Not Defined'}
-              </span>
-            </div>
-          </div>}
       </div>
     </ScoreCardContainer>
   );
