@@ -1,13 +1,16 @@
-import { Photo } from '../photo';
+import { Photo, PhotoDateRange } from '../photo';
 import { Camera, Cameras } from '@/camera';
-import { PhotoDateRange } from '../photo';
 import { Films } from '@/film';
 import { Lens, Lenses } from '@/lens';
 import { Tags } from '@/tag';
 import { FocalLengths } from '@/focal';
 import { Recipes } from '@/recipe';
+import { Recents } from '@/recents';
+import { Years } from '@/years';
 
 const CATEGORY_KEYS = [
+  'recents',
+  'years',
   'cameras',
   'lenses',
   'tags',
@@ -40,6 +43,8 @@ export const getHiddenDefaultCategories = (keys: CategoryKeys): CategoryKeys =>
   DEFAULT_CATEGORY_KEYS.filter(key => !keys.includes(key));
 
 export interface PhotoSetCategory {
+  recent?: boolean
+  year?: string
   camera?: Camera
   lens?: Lens
   tag?: string
@@ -55,6 +60,8 @@ export interface PhotoSetCategories {
   recipes: Recipes
   films: Films
   focalLengths: FocalLengths
+  years: Years
+  recents: Recents
 }
 
 export interface PhotoSetAttributes {

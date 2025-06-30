@@ -8,6 +8,7 @@ import {
   makeUrlAbsolute,
   shortenUrl,
 } from '@/utility/url';
+import { getSortByFromString } from '@/photo/db/sort';
 
 // HARD-CODED GLOBAL CONFIGURATION
 
@@ -244,6 +245,12 @@ export const BLUR_ENABLED =
 
 export const CATEGORY_VISIBILITY = getOrderedCategoriesFromString(
   process.env.NEXT_PUBLIC_CATEGORY_VISIBILITY);
+export const SHOW_RECENTS =
+  CATEGORY_VISIBILITY.includes('recents');
+export const IS_RECENTS_FIRST =
+  CATEGORY_VISIBILITY[0] === 'recents';
+export const SHOW_YEARS =
+  CATEGORY_VISIBILITY.includes('years');
 export const SHOW_CAMERAS =
   CATEGORY_VISIBILITY.includes('cameras');
 export const SHOW_LENSES =
@@ -260,6 +267,19 @@ export const COLLAPSE_SIDEBAR_CATEGORIES =
   process.env.NEXT_PUBLIC_EXHAUSTIVE_SIDEBAR_CATEGORIES !== '1';
 export const HIDE_TAGS_WITH_ONE_PHOTO =
   process.env.NEXT_PUBLIC_HIDE_TAGS_WITH_ONE_PHOTO === '1';
+
+// SORT
+
+export const USER_DEFAULT_SORT_BY =
+  getSortByFromString(process.env.NEXT_PUBLIC_DEFAULT_SORT);
+export const USER_DEFAULT_SORT_WITH_PRIORITY =
+  process.env.NEXT_PUBLIC_PRIORITY_BASED_SORTING === '1';
+export const USER_DEFAULT_SORT_OPTIONS = {
+  sortBy: USER_DEFAULT_SORT_BY,
+  sortWithPriority: USER_DEFAULT_SORT_WITH_PRIORITY,
+};
+export const SHOW_SORT_CONTROL =
+  process.env.NEXT_PUBLIC_SHOW_SORT_CONTROL === '1';
 
 // DISPLAY
 
@@ -315,8 +335,6 @@ export const ALLOW_PUBLIC_DOWNLOADS =
   process.env.NEXT_PUBLIC_ALLOW_PUBLIC_DOWNLOADS === '1';
 export const SITE_FEEDS_ENABLED =
   process.env.NEXT_PUBLIC_SITE_FEEDS === '1';
-export const PRIORITY_ORDER_ENABLED =
-  process.env.NEXT_PUBLIC_IGNORE_PRIORITY_ORDER !== '1';
 export const OG_TEXT_BOTTOM_ALIGNMENT =
   (process.env.NEXT_PUBLIC_OG_TEXT_ALIGNMENT ?? '').toUpperCase() === 'BOTTOM';
 
@@ -399,6 +417,11 @@ export const APP_CONFIGURATION = {
   categoryVisibility: CATEGORY_VISIBILITY,
   collapseSidebarCategories: COLLAPSE_SIDEBAR_CATEGORIES,
   hideTagsWithOnePhoto: HIDE_TAGS_WITH_ONE_PHOTO,
+  // Sort
+  hasDefaultSortBy: Boolean(process.env.NEXT_PUBLIC_DEFAULT_SORT),
+  defaultSortBy: USER_DEFAULT_SORT_BY,
+  isSortWithPriority: USER_DEFAULT_SORT_WITH_PRIORITY,
+  showSortControl: SHOW_SORT_CONTROL,
   // Display
   showKeyboardShortcutTooltips: SHOW_KEYBOARD_SHORTCUT_TOOLTIPS,
   showExifInfo: SHOW_EXIF_DATA,
@@ -427,7 +450,6 @@ export const APP_CONFIGURATION = {
   isGeoPrivacyEnabled: GEO_PRIVACY_ENABLED,
   arePublicDownloadsEnabled: ALLOW_PUBLIC_DOWNLOADS,
   areSiteFeedsEnabled: SITE_FEEDS_ENABLED,
-  isPriorityOrderEnabled: PRIORITY_ORDER_ENABLED,
   isOgTextBottomAligned: OG_TEXT_BOTTOM_ALIGNMENT,
   // Internal
   areInternalToolsEnabled: (

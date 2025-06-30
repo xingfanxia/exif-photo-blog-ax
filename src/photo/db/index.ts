@@ -1,8 +1,8 @@
-import { PRIORITY_ORDER_ENABLED } from '@/app/config';
 import { parameterize } from '@/utility/string';
 import { PhotoSetCategory } from '../../category';
 import { Camera } from '@/camera';
 import { Lens } from '@/lens';
+import { APP_DEFAULT_SORT_BY, SortBy } from './sort';
 
 export const GENERATE_STATIC_PARAMS_LIMIT = 1000;
 export const PHOTO_DEFAULT_LIMIT = 100;
@@ -20,7 +20,8 @@ const parameterizeForDb = (field: string) =>
   , `LOWER(TRIM(${field}))`);
 
 export type GetPhotosOptions = {
-  sortBy?: 'createdAt' | 'createdAtAsc' | 'takenAt' | 'priority'
+  sortBy?: SortBy
+  sortWithPriority?: boolean
   limit?: number
   offset?: number
   query?: string
@@ -48,6 +49,8 @@ export const getWheresFromOptions = (
     updatedBefore,
     query,
     maximumAspectRatio,
+    recent,
+    year,
     tag,
     camera,
     lens,
@@ -89,6 +92,18 @@ export const getWheresFromOptions = (
   if (maximumAspectRatio) {
     wheres.push(`aspect_ratio <= $${valuesIndex++}`);
     wheresValues.push(maximumAspectRatio);
+  }
+  if (recent) {
+    // Newest upload must be within past 2 weeks
+    // eslint-disable-next-line max-len
+    wheres.push('(SELECT MAX(created_at) FROM photos) >= (now() - INTERVAL \'14 days\')');
+    // Selects must be within 2 weeks of newest upload
+    // eslint-disable-next-line max-len
+    wheres.push('created_at >= (SELECT MAX(created_at) - INTERVAL \'14 days\' FROM photos)');
+  }
+  if (year) {
+    wheres.push(`EXTRACT(YEAR FROM taken_at) = $${valuesIndex++}`);
+    wheresValues.push(year);
   }
   if (camera?.make) {
     wheres.push(`${parameterizeForDb('make')}=$${valuesIndex++}`);
@@ -136,18 +151,27 @@ export const getWheresFromOptions = (
 
 export const getOrderByFromOptions = (options: GetPhotosOptions) => {
   const {
-    sortBy = PRIORITY_ORDER_ENABLED ? 'priority' : 'takenAt',
+    sortBy = APP_DEFAULT_SORT_BY,
+    sortWithPriority,
   } = options;
 
   switch (sortBy) {
-  case 'createdAt':
-    return 'ORDER BY created_at DESC';
-  case 'createdAtAsc':
-    return 'ORDER BY created_at ASC';
   case 'takenAt':
-    return 'ORDER BY taken_at DESC';
-  case 'priority':
-    return 'ORDER BY priority_order ASC, taken_at DESC';
+    return sortWithPriority
+      ? 'ORDER BY priority_order ASC, taken_at DESC'
+      : 'ORDER BY taken_at DESC';
+  case 'takenAtAsc':
+    return sortWithPriority
+      ? 'ORDER BY priority_order ASC, taken_at ASC'
+      : 'ORDER BY taken_at ASC';
+  case 'createdAt':
+    return sortWithPriority
+      ? 'ORDER BY priority_order ASC, created_at DESC'
+      : 'ORDER BY created_at DESC';
+  case 'createdAtAsc':
+    return sortWithPriority
+      ? 'ORDER BY priority_order ASC, created_at ASC'
+      : 'ORDER BY created_at ASC';
   }
 };
 

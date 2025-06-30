@@ -18,12 +18,14 @@ export interface EntityLinkExternalProps {
   showTooltip?: boolean
   uppercase?: boolean
   prefetch?: boolean
+  suppressSpinner?: boolean
   className?: string
 }
 
 export default function EntityLink({
   ref,
   icon,
+  iconBadge,
   label,
   labelSmall,
   labelComplex,
@@ -43,9 +45,11 @@ export default function EntityLink({
   className,
   classNameIcon,
   uppercase,
+  suppressSpinner,
   debug,
 }: {
   icon: ReactNode
+  iconBadge?: ReactNode
   label: string
   labelSmall?: ReactNode
   labelComplex?: ReactNode
@@ -95,7 +99,8 @@ export default function EntityLink({
         'peer',
         'inline-flex items-center gap-2 max-w-full truncate',
         classForContrast(),
-        path && !badged && 'hover:text-gray-900 dark:hover:text-gray-100',
+        path && !badged && contrast !== 'frosted' &&
+          'hover:text-gray-900 dark:hover:text-gray-100',
         path && !badged && 'active:text-medium!',
       )}
       isLoading={isLoading}
@@ -115,10 +120,14 @@ export default function EntityLink({
           ? <Badge
             type="small"
             contrast={contrast}
-            className="translate-y-[-0.5px]"
+            className={clsx(
+              'translate-y-[-0.5px]',
+              iconBadge && '*:flex *:items-center *:gap-1',
+            )}
             uppercase
             interactive
           >
+            {iconBadge}
             {renderLabel}
           </Badge>
           : <span className={clsx(
@@ -148,6 +157,7 @@ export default function EntityLink({
           title={label}
           path={tooltipImagePath}
           caption={tooltipCaption}
+          color={contrast === 'frosted' ? 'frosted' : undefined}
         >
           {renderLink}
         </OGTooltip>
@@ -160,7 +170,7 @@ export default function EntityLink({
         <span className="hidden peer-hover:inline text-dim">
           {hoverEntity}
         </span>}
-      {isLoading &&
+      {isLoading && !suppressSpinner &&
         <Spinner
           className={clsx(
             badged && 'translate-y-[0.5px]',
