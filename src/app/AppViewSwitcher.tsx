@@ -1,14 +1,14 @@
 import Switcher from '@/components/Switcher';
 import SwitcherItem from '@/components/SwitcherItem';
-import IconFeed from '@/components/icons/IconFeed';
+import IconFull from '@/components/icons/IconFull';
 import IconGrid from '@/components/icons/IconGrid';
 import {
   doesPathOfferSort,
-  PATH_FEED_INFERRED,
+  PATH_FULL_INFERRED,
   PATH_GRID_INFERRED,
 } from '@/app/paths';
 import IconSearch from '../components/icons/IconSearch';
-import { useAppState } from '@/state/AppState';
+import { useAppState } from '@/app/AppState';
 import {
   GRID_HOMEPAGE_ENABLED,
   SHOW_KEYBOARD_SHORTCUT_TOOLTIPS,
@@ -26,16 +26,18 @@ import IconSort from '@/components/icons/IconSort';
 import { getSortConfigFromPath } from '@/photo/db/sort-path';
 import { motion } from 'framer-motion';
 
-export type SwitcherSelection = 'feed' | 'grid' | 'admin';
+export type SwitcherSelection = 'full' | 'grid' | 'admin';
 
 const GAP_CLASS = 'mr-1.5 sm:mr-2';
 
 export default function AppViewSwitcher({
   currentSelection,
   className,
+  animate = true,
 }: {
   currentSelection?: SwitcherSelection
   className?: string
+  animate?: boolean
 }) {
   const pathname = usePathname();
   
@@ -53,7 +55,7 @@ export default function AppViewSwitcher({
     sortBy,
     isAscending,
     pathGrid,
-    pathFeed,
+    pathFull,
     pathSort,
   } = getSortConfigFromPath(pathname);
 
@@ -61,19 +63,19 @@ export default function AppViewSwitcher({
   useEffect(() => {
     if (hasLoadedRef.current) {
       // After initial load, invalidate cache every time sort changes
-      invalidateSwr?.();
+      invalidateSwr?.('INFINITE_PHOTO_SCROLL');
     }
     hasLoadedRef.current = true;
   }, [invalidateSwr, sortBy]);
 
-  const refHrefFeed = useRef<HTMLAnchorElement>(null);
+  const refHrefFull = useRef<HTMLAnchorElement>(null);
   const refHrefGrid = useRef<HTMLAnchorElement>(null);
 
   const onKeyDown = useCallback((e: KeyboardEvent) => {
     if (!e.metaKey) {
       switch (e.key.toLocaleUpperCase()) {
-      case KEY_COMMANDS.feed:
-        if (pathname !== PATH_FEED_INFERRED) { refHrefFeed.current?.click(); }
+      case KEY_COMMANDS.full:
+        if (pathname !== PATH_FULL_INFERRED) { refHrefFull.current?.click(); }
         break;
       case KEY_COMMANDS.grid:
         if (pathname !== PATH_GRID_INFERRED) { refHrefGrid.current?.click(); }
@@ -88,15 +90,15 @@ export default function AppViewSwitcher({
 
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
 
-  const renderItemFeed =
+  const renderItemFull =
     <SwitcherItem
-      icon={<IconFeed includeTitle={false} />}
-      href={pathFeed}
-      hrefRef={refHrefFeed}
-      active={currentSelection === 'feed'}
+      icon={<IconFull includeTitle={false} />}
+      href={pathFull}
+      hrefRef={refHrefFull}
+      active={currentSelection === 'full'}
       tooltip={{...SHOW_KEYBOARD_SHORTCUT_TOOLTIPS && {
-        content: appText.nav.feed,
-        keyCommand: KEY_COMMANDS.feed,
+        content: appText.nav.full,
+        keyCommand: KEY_COMMANDS.full,
       }}}
       noPadding
     />;
@@ -117,8 +119,8 @@ export default function AppViewSwitcher({
   return (
     <div className={clsx('flex', className)}>
       <Switcher className={GAP_CLASS}>
-        {GRID_HOMEPAGE_ENABLED ? renderItemGrid : renderItemFeed}
-        {GRID_HOMEPAGE_ENABLED ? renderItemFeed : renderItemGrid}
+        {GRID_HOMEPAGE_ENABLED ? renderItemGrid : renderItemFull}
+        {GRID_HOMEPAGE_ENABLED ? renderItemFull : renderItemGrid}
         {/* Show spinner if admin is suspected to be logged in */}
         {(isUserSignedInEager && !isUserSignedIn) &&
           <SwitcherItem
@@ -149,10 +151,10 @@ export default function AppViewSwitcher({
       </Switcher>
       {showSortControl &&
         <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
+          initial={animate ? { opacity: 0, scale: 0.5 } : false}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5 }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
           className={GAP_CLASS}
         >
           <Switcher className="max-sm:hidden">
@@ -164,13 +166,18 @@ export default function AppViewSwitcher({
               />}
               tooltip={{
                 content: isAscending
-                  ? 'View newest first'
-                  : 'View oldest first',
+                  ? appText.sort.newest
+                  : appText.sort.oldest,
               }}
             />
           </Switcher>
         </motion.div>}
-      <motion.div layout>
+      <motion.div
+        // Conditional key necessary to halt/resume layout animations
+        key={animate ? 'search' : 'search-no-animate'}
+        layout={animate}
+        transition={{ duration: 0.2, ease: 'easeInOut' }}
+      >
         <Switcher type="borderless">
           <SwitcherItem
             icon={<IconSearch includeTitle={false} />}

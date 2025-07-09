@@ -42,7 +42,7 @@ export const TEXT = {
   },
   nav: {
     home: 'Home',
-    feed: 'Feed',
+    full: 'Full',
     grid: 'Grid',
     admin: 'Admin',
     search: 'Search',
@@ -50,6 +50,10 @@ export const TEXT = {
     prevShort: 'Prev',
     next: 'Next',
     nextShort: 'Next',
+  },
+  sort: {
+    newest: 'View newest',
+    oldest: 'View oldest',
   },
   cmdk: {
     placeholder: 'Search photos, views, settings ...',
@@ -97,8 +101,8 @@ export const TEXT = {
     edit: 'Edit',
     favorite: 'Favorite',
     unfavorite: 'Unfavorite',
-    hide: 'Hide',
-    unhide: 'Unhide',
+    private: 'Make Private',
+    public: 'Make Public',
     download: 'Download',
     sync: 'Sync',
     delete: 'Delete',

@@ -14,7 +14,7 @@ import {
   renamePhotoRecipeGlobally,
   getPhotosNeedingRecipeTitleCount,
 } from '@/photo/db/query';
-import { GetPhotosOptions, areOptionsSensitive } from './db';
+import { PhotoQueryOptions, areOptionsSensitive } from './db';
 import {
   FIELDS_TO_NOT_OVERWRITE_WITH_NULL_DATA_ON_SYNC,
   PhotoFormData,
@@ -94,16 +94,19 @@ const addUpload = async ({
   tags,
   favorite,
   hidden,
+  excludeFromFeeds,
   takenAtLocal,
   takenAtNaiveLocal,
   onStreamUpdate,
   onFinish,
+  shouldRevalidateAllKeysAndPaths,
 }:{
   url: string
   title?: string
   tags?: string
   favorite?: string
   hidden?: string
+  excludeFromFeeds?: string
   takenAtLocal: string
   takenAtNaiveLocal: string
   onStreamUpdate?: (
@@ -111,6 +114,7 @@ const addUpload = async ({
     status?: UrlAddStatus['status'],
   ) => void
   onFinish?: (url: string) => void
+  shouldRevalidateAllKeysAndPaths?: boolean
 }) => {
   const {
     formDataFromExif,
@@ -147,6 +151,7 @@ const addUpload = async ({
       title: title || aiTitle,
       caption,
       tags: tags || aiTags,
+      excludeFromFeeds,
       hidden,
       favorite,
       semanticDescription,
@@ -168,6 +173,9 @@ const addUpload = async ({
         await convertFormDataToPhotoDbInsertAndLookupRecipeTitle(form);
       photo.url = updatedUrl;
       await insertPhoto(photo);
+      if (shouldRevalidateAllKeysAndPaths) {
+        after(revalidateAllKeysAndPaths);
+      }
       onFinish?.(url);
       // Re-submit with updated url
       onStreamUpdate?.(subheadFinal, 'added');
@@ -187,6 +195,7 @@ export const addUploadsAction = async ({
   tags,
   favorite,
   hidden,
+  excludeFromFeeds,
   takenAtLocal,
   takenAtNaiveLocal,
 }: Omit<
@@ -231,6 +240,7 @@ export const addUploadsAction = async ({
             tags,
             favorite,
             hidden,
+            excludeFromFeeds,
             takenAtLocal,
             takenAtNaiveLocal,
             onStreamUpdate: streamUpdate,
@@ -317,7 +327,7 @@ export const toggleFavoritePhotoAction = async (
     }
   });
 
-export const toggleHidePhotoAction = async (
+export const togglePrivatePhotoAction = async (
   photoId: string,
   redirectPath?: string,
 ) =>
@@ -546,7 +556,7 @@ export const getImageBlurAction = async (url: string) =>
 // Public/Private actions
 
 export const getPhotosAction = async (
-  options: GetPhotosOptions,
+  options: PhotoQueryOptions,
   warmOnly?: boolean,
 ) => {
   if (warmOnly) {
@@ -559,7 +569,7 @@ export const getPhotosAction = async (
 };
 
 export const getPhotosCachedAction = async (
-  options: GetPhotosOptions,
+  options: PhotoQueryOptions,
   warmOnly?: boolean,
 ) => {
   if (warmOnly) {

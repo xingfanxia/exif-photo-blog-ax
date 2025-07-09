@@ -4,13 +4,22 @@ import PhotoCamera from '@/camera/PhotoCamera';
 import HeaderList from '@/components/HeaderList';
 import PhotoTag from '@/tag/PhotoTag';
 import { photoQuantityText } from '.';
-import { TAG_FAVS, TAG_HIDDEN, addHiddenToTags, limitTagsByCount } from '@/tag';
+import {
+  TAG_FAVS,
+  TAG_PRIVATE,
+  addPrivateToTags,
+  limitTagsByCount,
+} from '@/tag';
 import PhotoFilm from '@/film/PhotoFilm';
-import FavsTag from '../tag/FavsTag';
-import { useAppState } from '@/state/AppState';
+import PhotoFavs from '../tag/PhotoFavs';
+import { useAppState } from '@/app/AppState';
 import { useMemo, useRef } from 'react';
-import HiddenTag from '@/tag/HiddenTag';
-import { CATEGORY_VISIBILITY, HIDE_TAGS_WITH_ONE_PHOTO } from '@/app/config';
+import PhotoPrivate from '@/tag/PhotoPrivate';
+import {
+  CATEGORY_VISIBILITY,
+  HIDE_TAGS_WITH_ONE_PHOTO,
+  SHOW_CATEGORY_IMAGE_HOVERS,
+} from '@/app/config';
 import { clsx } from 'clsx/lite';
 import PhotoRecipe from '@/recipe/PhotoRecipe';
 import IconCamera from '@/components/icons/IconCamera';
@@ -92,7 +101,7 @@ export default function PhotoGridSidebar({
   const { photosCountHidden } = useAppState();
 
   const tagsIncludingHidden = useMemo(() =>
-    addHiddenToTags(tags, photosCountHidden)
+    addPrivateToTags(tags, photosCountHidden)
   , [tags, photosCountHidden]);
 
   const recentsContent = recents.length > 0
@@ -124,7 +133,7 @@ export default function PhotoGridSidebar({
             <PhotoYear
               key={year}
               year={year}
-              countOnHover={count}
+              countOnHover={SHOW_CATEGORY_IMAGE_HOVERS ? count : undefined}
               type="text-only"
               prefetch={false}
               contrast="low"
@@ -153,7 +162,6 @@ export default function PhotoGridSidebar({
             countOnHover={count}
             prefetch={false}
             contrast="low"
-            hideAppleIcon
             badged
           />)}
     />
@@ -192,7 +200,7 @@ export default function PhotoGridSidebar({
         .map(({ tag, count }) => {
           switch (tag) {
           case TAG_FAVS:
-            return <FavsTag
+            return <PhotoFavs
               key={TAG_FAVS}
               countOnHover={count}
               type="icon-last"
@@ -200,9 +208,9 @@ export default function PhotoGridSidebar({
               contrast="low"
               badged
             />;
-          case TAG_HIDDEN:
-            return <HiddenTag
-              key={TAG_HIDDEN}
+          case TAG_PRIVATE:
+            return <PhotoPrivate
+              key={TAG_PRIVATE}
               countOnHover={count}
               type="icon-last"
               prefetch={false}

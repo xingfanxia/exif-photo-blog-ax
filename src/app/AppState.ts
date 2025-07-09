@@ -14,14 +14,14 @@ import { INITIAL_UPLOAD_STATE, UploadState } from '@/admin/upload';
 import { AdminData } from '@/admin/actions';
 import { RecipeProps } from '@/recipe';
 import { getCountsForCategoriesCachedAction } from '@/category/actions';
+import { SWRKey } from '@/swr';
 
 export type AppStateContextType = {
   // CORE
   previousPathname?: string
   hasLoaded?: boolean
-  setHasLoaded?: Dispatch<SetStateAction<boolean>>
-  swrTimestamp?: number
-  invalidateSwr?: () => void
+  hasLoadedWithAnimations?: boolean
+  invalidateSwr?: (key?: SWRKey, revalidate?: boolean) => void
   nextPhotoAnimation?: AnimationConfig
   setNextPhotoAnimation?: (animationConfig?: AnimationConfig) => void
   getNextPhotoAnimationId?: () => string

@@ -44,7 +44,7 @@ export const TEXT: I18N = {
   },
   nav: {
     home: 'হোম',
-    feed: 'ফিড',
+    full: 'সম্পূর্ণ',
     grid: 'গ্রিড',
     admin: 'অ্যাডমিন',
     search: 'সার্চ',
@@ -52,6 +52,10 @@ export const TEXT: I18N = {
     prevShort: 'পূর্ব',
     next: 'পরবর্তী',
     nextShort: 'পরবর্তী',
+  },
+  sort: {
+    newest: 'নতুনতম দেখুন',
+    oldest: 'পুরাতনতম দেখুন',
   },
   cmdk: {
     placeholder: 'ছবি, ভিউ, সেটিংস অনুসন্ধান করুন ...',
@@ -99,8 +103,8 @@ export const TEXT: I18N = {
     edit: 'এডিট',
     favorite: 'পছন্দ',
     unfavorite: 'পছন্দ অপসারণ',
-    hide: 'লুকান',
-    unhide: 'দেখান',
+    private: 'ব্যক্তিগত করুন',
+    public: 'সর্বজনীন করুন',
     download: 'ডাউনলোড',
     sync: 'সিঙ্ক',
     delete: 'ডিলিট',

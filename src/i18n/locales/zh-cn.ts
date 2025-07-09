@@ -43,7 +43,7 @@ export const TEXT: I18N = {
   },
   nav: {
     home: '首页',
-    feed: '动态',
+    full: '完整',
     grid: '网格',
     admin: '管理',
     search: '搜索',
@@ -51,6 +51,10 @@ export const TEXT: I18N = {
     prevShort: '上一页',
     next: '下一页',
     nextShort: '下一页',
+  },
+  sort: {
+    newest: '查看最新',
+    oldest: '查看最旧',
   },
   cmdk: {
     placeholder: '搜索照片、视图、设置...',
@@ -98,8 +102,8 @@ export const TEXT: I18N = {
     edit: '编辑',
     favorite: '收藏',
     unfavorite: '取消收藏',
-    hide: '隐藏',
-    unhide: '取消隐藏',
+    private: '设为私密',
+    public: '设为公开',
     download: '下载',
     sync: '同步',
     delete: '删除',

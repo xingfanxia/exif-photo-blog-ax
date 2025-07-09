@@ -82,8 +82,9 @@ export default function AdminAppConfigurationClient({
   imageQuality,
   isBlurEnabled,
   // Categories
-  categoryVisibility,
   hasCategoryVisibility,
+  categoryVisibility,
+  showCategoryImageHover,
   collapseSidebarCategories,
   hideTagsWithOnePhoto,
   // Sort
@@ -94,7 +95,6 @@ export default function AdminAppConfigurationClient({
   // Display
   showKeyboardShortcutTooltips,
   showExifInfo,
-  showCategoryImageHover,
   showZoomControls,
   showTakenAtTimeHidden,
   showSocial,
@@ -583,6 +583,19 @@ export default function AdminAppConfigurationClient({
             {renderEnvVars(['NEXT_PUBLIC_CATEGORY_VISIBILITY'])}
           </ChecklistRow>
           <ChecklistRow
+            title="Show image hovers"
+            status={showCategoryImageHover}
+            optional
+          >
+            <div className="flex flex-col gap-2">
+              <div>
+                Set environment variable to {'"1"'} to prevent images
+                displaying when hovering over category links:
+                {renderEnvVars(['NEXT_PUBLIC_HIDE_CATEGORY_IMAGE_HOVERS'])}
+              </div>
+            </div>
+          </ChecklistRow>
+          <ChecklistRow
             title="Collapsible sidebar"
             status={collapseSidebarCategories}
             optional
@@ -607,7 +620,7 @@ export default function AdminAppConfigurationClient({
           optional
         >
           <ChecklistRow
-            title="Default sort"
+            title="Order"
             status={hasDefaultSortBy}
             optional
           >
@@ -622,11 +635,11 @@ export default function AdminAppConfigurationClient({
                   )}
                 </Fragment>)}
             </div>
-            Change default sort on grid/feed homepages
+            Change default sort on grid/full homepages
             {renderEnvVars(['NEXT_PUBLIC_DEFAULT_SORT'])}
           </ChecklistRow>
           <ChecklistRow
-            title="Priority-based sorting"
+            title="Priority-based"
             status={isSortWithPriority}
             optional
           >
@@ -636,12 +649,12 @@ export default function AdminAppConfigurationClient({
             {renderEnvVars(['NEXT_PUBLIC_PRIORITY_BASED_SORTING'])}
           </ChecklistRow>
           <ChecklistRow
-            title="Show sort control"
+            title="Show nav button"
             status={showSortControl}
             optional
           >
             Set environment variable to {'"1"'} to
-            show sort control in desktop nav on grid/feed homepages:
+            show sort control in desktop nav on grid/full homepages:
             {renderEnvVars(['NEXT_PUBLIC_SHOW_SORT_CONTROL'])}
           </ChecklistRow>
         </ChecklistGroup>
@@ -666,25 +679,6 @@ export default function AdminAppConfigurationClient({
           >
             Set environment variable to {'"1"'} to hide EXIF data:
             {renderEnvVars(['NEXT_PUBLIC_HIDE_EXIF_DATA'])}
-          </ChecklistRow>
-          <ChecklistRow
-            title="Show category image hovers"
-            status={showCategoryImageHover}
-            optional
-          >
-            <div className="flex flex-col gap-2">
-              <div>
-                Set environment variable to {'"1"'} to show images when hovering
-                over category links like cameras and lenses:
-                {renderEnvVars(['NEXT_PUBLIC_CATEGORY_IMAGE_HOVERS'])}
-              </div>
-              <div>
-                Static optimization strongly recommended
-                for responsive hover interactions:
-                {/* eslint-disable-next-line max-len */}
-                {renderEnvVars(['NEXT_PUBLIC_STATICALLY_OPTIMIZE_PHOTO_CATEGORY_OG_IMAGES'])}
-              </div>
-            </div>
           </ChecklistRow>
           <ChecklistRow
             title="Show zoom controls"

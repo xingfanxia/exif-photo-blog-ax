@@ -43,7 +43,7 @@ export const TEXT: I18N = {
   },
   nav: {
     home: 'Início',
-    feed: 'Feed',
+    full: 'Completo',
     grid: 'Grade',
     admin: 'Menu de administração',
     search: 'Pesquisar',
@@ -51,6 +51,10 @@ export const TEXT: I18N = {
     prevShort: 'Ant',
     next: 'Próximo',
     nextShort: 'Próx',
+  },
+  sort: {
+    newest: 'Ver mais recentes',
+    oldest: 'Ver mais antigas',
   },
   cmdk: {
     placeholder: 'Pesquisar fotografias, visualizações, configurações ...',
@@ -98,8 +102,8 @@ export const TEXT: I18N = {
     edit: 'Editar',
     favorite: 'Favoritar',
     unfavorite: 'Remover dos favoritos',
-    hide: 'Ocultar',
-    unhide: 'Mostrar',
+    private: 'Tornar Privado',
+    public: 'Tornar Público',
     download: 'Descarregar',
     sync: 'Sincronizar',
     delete: 'Excluir',

@@ -75,7 +75,7 @@ export default function AdminUploadsTableRow({
       className={clsx(
         'flex items-center grow',
         'transition-opacity',
-        'rounded-md overflow-hidden',
+        'rounded-lg overflow-hidden',
         'border-medium bg-extra-dim',
         isAdding && !isComplete && status !== 'adding' && 'opacity-30',
       )}
@@ -113,6 +113,7 @@ export default function AdminUploadsTableRow({
               placeholder="Title (optional)"
               tabIndex={tabIndex}
               readOnly={isRowLoading}
+              capitalize
               hideLabel
             />
             <div className="flex items-center gap-2">
@@ -129,6 +130,7 @@ export default function AdminUploadsTableRow({
                 : <>
                   <AddUploadButton
                     url={url}
+                    title={draftTitle}
                     onAddStart={() => updateStatus({
                       status: 'adding',
                       statusMessage: 'Adding ...',
@@ -136,12 +138,14 @@ export default function AdminUploadsTableRow({
                     onAddFinish={removeRow}
                     shouldRedirectToAdminPhotos={shouldRedirectAfterAction}
                     disabled={isRowLoading}
+                    tooltipSide="bottom"
                   />
                   <EditButton
                     path={pathForAdminUploadUrl(url, draftTitle)}
                     disabled={isRowLoading}
                     tooltip="Review EXIF details before adding"
                     hideText="always"
+                    tooltipSide="bottom"
                   />
                   <DeleteUploadButton
                     urls={[url]}
@@ -153,6 +157,7 @@ export default function AdminUploadsTableRow({
                     }}
                     disabled={isRowLoading}
                     tooltip="Delete upload"
+                    tooltipSide="bottom"
                   />
                 </>}
             </div>

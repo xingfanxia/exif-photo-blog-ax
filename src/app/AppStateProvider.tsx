@@ -7,11 +7,11 @@ import {
   useCallback,
   useRef,
 } from 'react';
-import { AppStateContext } from './AppState';
+import { AppStateContext } from '../app/AppState';
 import { AnimationConfig } from '@/components/AnimateItems';
 import usePathnames from '@/utility/usePathnames';
 import { getAuthAction } from '@/auth/actions';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import {
   HIGH_DENSITY_GRID,
   IS_DEVELOPMENT,
@@ -30,9 +30,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import { isPathProtected, PATH_ROOT } from '@/app/paths';
 import { INITIAL_UPLOAD_STATE, UploadState } from '@/admin/upload';
 import { RecipeProps } from '@/recipe';
-import { getCountsForCategoriesCachedAction } from '@/category/actions';
 import { nanoid } from 'nanoid';
 import { toastSuccess } from '@/toast';
+import { getCountsForCategoriesCachedAction } from '@/category/actions';
+import {
+  canKeyBePurged,
+  canKeyBePurgedAndRevalidated,
+  SWR_KEYS,
+  SWRKey,
+} from '@/swr';
 
 export default function AppStateProvider({
   children,
@@ -50,8 +56,8 @@ export default function AppStateProvider({
   // CORE
   const [hasLoaded, setHasLoaded] =
     useState(false);
-  const [swrTimestamp, setSwrTimestamp] =
-    useState(Date.now());
+  const [hasLoadedWithAnimations, setHasLoadedWithAnimations] =
+    useState(false);
   const [nextPhotoAnimation, _setNextPhotoAnimation] =
     useState<AnimationConfig>();
   const setNextPhotoAnimation = useCallback((animation?: AnimationConfig) => {
@@ -112,14 +118,29 @@ export default function AppStateProvider({
     useState(false);
 
   useEffect(() => {
-    setHasLoaded?.(true);
+    setHasLoaded(true);
     storeTimezoneCookie();
+    setUserEmailEager(getAuthEmailCookie());
+    const timeout = setTimeout(() => {
+      setHasLoadedWithAnimations(true);
+    }, 1000);
+    return () => clearTimeout(timeout);
   }, []);
 
-  const invalidateSwr = useCallback(() => setSwrTimestamp(Date.now()), []);
+  const { mutate } = useSWRConfig();
+  const invalidateSwr = useCallback((key?: SWRKey, revalidate?: boolean) => {
+    if (key) {
+      // Mutate specific key
+      mutate((k: string) => k?.startsWith(key), undefined, { revalidate });
+    } else {
+      // Mutate all keys that can be purged
+      mutate(canKeyBePurged, undefined, { revalidate: false });
+      mutate(canKeyBePurgedAndRevalidated, undefined, { revalidate: true });
+    }
+  }, [mutate]);
 
   const { data: categoriesWithCounts } = useSWR(
-    'getDataForCategories',
+    SWR_KEYS.GET_COUNTS_FOR_CATEGORIES,
     getCountsForCategoriesCachedAction,
   );
 
@@ -127,10 +148,7 @@ export default function AppStateProvider({
     data: auth,
     error: authError,
     isLoading: isCheckingAuth,
-  } = useSWR('getAuth', getAuthAction);
-  useEffect(() => {
-    setUserEmailEager(getAuthEmailCookie());
-  }, []);
+  } = useSWR(SWR_KEYS.GET_AUTH, getAuthAction);
   useEffect(() => {
     if (auth === null || authError) {
       setUserEmail(undefined);
@@ -148,7 +166,7 @@ export default function AppStateProvider({
     mutate: refreshAdminData,
     isLoading: isLoadingAdminData,
   } = useSWR(
-    isUserSignedIn ? 'getAdminData' : null,
+    isUserSignedIn ? SWR_KEYS.GET_ADMIN_DATA : null,
     getAdminDataAction,
   );
   const updateAdminData = useCallback(
@@ -207,8 +225,7 @@ export default function AppStateProvider({
         // CORE
         previousPathname,
         hasLoaded,
-        setHasLoaded,
-        swrTimestamp,
+        hasLoadedWithAnimations,
         invalidateSwr,
         nextPhotoAnimation,
         setNextPhotoAnimation,

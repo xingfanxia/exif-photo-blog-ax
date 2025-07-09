@@ -18,14 +18,14 @@ import {
   getUniqueRecipes,
   getUniqueYears,
 } from '@/photo/db/query';
-import { GetPhotosOptions } from './db';
+import { PhotoQueryOptions } from './db';
 import { parseCachedPhotoDates, parseCachedPhotosDates } from '@/photo';
 import { createCameraKey } from '@/camera';
 import {
   PATHS_ADMIN,
   PATHS_TO_CACHE,
   PATH_ADMIN,
-  PATH_FEED,
+  PATH_FULL,
   PATH_GRID,
   PATH_ROOT,
   PREFIX_CAMERA,
@@ -54,9 +54,9 @@ const KEY_YEARS             = 'years';
 const KEY_COUNT             = 'count';
 const KEY_DATE_RANGE        = 'date-range';
 
-const getPhotosCacheKeyForOption = (
-  options: GetPhotosOptions,
-  option: keyof GetPhotosOptions,
+const getCacheKeyForPhotoQueryOptions = (
+  options: PhotoQueryOptions,
+  option: keyof PhotoQueryOptions,
 ): string | null => {
   switch (option) {
   // Complex keys
@@ -81,13 +81,13 @@ const getPhotosCacheKeyForOption = (
   }
 };
 
-const getPhotosCacheKeys = (options: GetPhotosOptions = {}) => {
+const getPhotosCacheKeys = (options: PhotoQueryOptions = {}) => {
   const tags: string[] = [];
 
   Object.keys(options).forEach(key => {
-    const tag = getPhotosCacheKeyForOption(
+    const tag = getCacheKeyForPhotoQueryOptions(
       options,
-      key as keyof GetPhotosOptions,
+      key as keyof PhotoQueryOptions,
     );
     if (tag) { tags.push(tag); }
   });
@@ -153,7 +153,7 @@ export const revalidatePhoto = (photoId: string) => {
   revalidatePath(pathForPhoto({ photo: photoId }), 'layout');
   revalidatePath(PATH_ROOT, 'layout');
   revalidatePath(PATH_GRID, 'layout');
-  revalidatePath(PATH_FEED, 'layout');
+  revalidatePath(PATH_FULL, 'layout');
   revalidatePath(PREFIX_TAG, 'layout');
   revalidatePath(PREFIX_CAMERA, 'layout');
   revalidatePath(PREFIX_LENS, 'layout');

@@ -43,7 +43,7 @@ export const TEXT: I18N = {
   },
   nav: {
     home: 'Beranda',
-    feed: 'Umpan',
+    full: 'Lengkap',
     grid: 'Grid',
     admin: 'Admin',
     search: 'Cari',
@@ -51,6 +51,10 @@ export const TEXT: I18N = {
     prevShort: 'Sblm',
     next: 'Berikutnya',
     nextShort: 'Brkt',
+  },
+  sort: {
+    newest: 'Lihat terbaru',
+    oldest: 'Lihat terlama',
   },
   cmdk: {
     placeholder: 'Cari foto, tampilan, pengaturan ...',
@@ -98,8 +102,8 @@ export const TEXT: I18N = {
     edit: 'Edit',
     favorite: 'Favorit',
     unfavorite: 'Hapus dari Favorit',
-    hide: 'Sembunyikan',
-    unhide: 'Tampilkan',
+    private: 'Buat Privat',
+    public: 'Buat Publik',
     download: 'Unduh',
     sync: 'Sinkronkan',
     delete: 'Hapus',
