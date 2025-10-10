@@ -15,6 +15,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import {
   HIGH_DENSITY_GRID,
   IS_DEVELOPMENT,
+  IS_PRODUCTION,
   MATTE_PHOTOS,
   SHOW_ZOOM_CONTROLS,
 } from '@/app/config';
@@ -39,6 +40,7 @@ import {
   SWR_KEYS,
   SWRKey,
 } from '@/swr';
+import { warmRedisAction } from './actions';
 
 export default function AppStateProvider({
   children,
@@ -91,13 +93,11 @@ export default function AppStateProvider({
     useState<string>();
   const [userEmailEager, setUserEmailEager] =
     useState<string>();
+  const isUserSignedIn = Boolean(userEmail);
+  const isUserSignedInEager = Boolean(userEmailEager);
   // ADMIN
   const [adminUpdateTimes, setAdminUpdateTimes] =
     useState<Date[]>([]);
-  const [selectedPhotoIds, setSelectedPhotoIds] =
-    useState<string[] | undefined>();
-  const [isPerformingSelectEdit, setIsPerformingSelectEdit] =
-    useState(false);
   // UPLOAD
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, _setUploadState] = useState(INITIAL_UPLOAD_STATE);
@@ -121,6 +121,7 @@ export default function AppStateProvider({
     setHasLoaded(true);
     storeTimezoneCookie();
     setUserEmailEager(getAuthEmailCookie());
+    if (IS_PRODUCTION) { warmRedisAction(); }
     const timeout = setTimeout(() => {
       setHasLoadedWithAnimations(true);
     }, 1000);
@@ -158,8 +159,6 @@ export default function AppStateProvider({
       setUserEmail(auth?.user?.email ?? undefined);
     }
   }, [auth, authError]);
-  const isUserSignedIn = Boolean(userEmail);
-  const isUserSignedInEager = Boolean(userEmailEager);
 
   const {
     data: adminData,
@@ -257,10 +256,6 @@ export default function AppStateProvider({
         isLoadingAdminData,
         refreshAdminData,
         updateAdminData,
-        selectedPhotoIds,
-        setSelectedPhotoIds,
-        isPerformingSelectEdit,
-        setIsPerformingSelectEdit,
         // UPLOAD
         uploadInputRef,
         startUpload,

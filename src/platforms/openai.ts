@@ -1,22 +1,17 @@
-import { generateText, streamText } from 'ai';
-import { createStreamableValue } from 'ai/rsc';
+import { generateText, streamText, generateObject } from 'ai';
+import { createStreamableValue } from '@ai-sdk/rsc';
 import { createOpenAI } from '@ai-sdk/openai';
-import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
-import {
-  AI_TEXT_GENERATION_ENABLED,
-  HAS_REDIS_STORAGE,
-  OPENAI_BASE_URL,
-} from '@/app/config';
+import { AI_CONTENT_GENERATION_ENABLED, OPENAI_BASE_URL } from '@/app/config';
 import { removeBase64Prefix } from '@/utility/image';
 import { cleanUpAiTextResponse } from '@/photo/ai';
-
-const redis = HAS_REDIS_STORAGE ? Redis.fromEnv() : undefined;
+import { redis } from '@/platforms/redis';
+import { z } from 'zod';
 
 const RATE_LIMIT_IDENTIFIER = 'openai-image-query';
 const MODEL = 'o4-mini';
 
-const openai = AI_TEXT_GENERATION_ENABLED
+const openai = AI_CONTENT_GENERATION_ENABLED
   ? createOpenAI({
     apiKey: process.env.OPENAI_SECRET_KEY,
     ...OPENAI_BASE_URL && { baseURL: OPENAI_BASE_URL },
@@ -110,6 +105,39 @@ export const generateOpenAiImageQuery = async (
   if (args) {
     return generateText(args)
       .then(({ text }) => cleanUpAiTextResponse(text));
+  }
+};
+
+export const generateOpenAiImageObjectQuery = async <T extends z.ZodSchema>(
+  imageBase64: string,
+  query: string,
+  schema: T,
+  isBatch?: boolean,
+): Promise<z.infer<T>> => {
+  await checkRateLimitAndThrow(isBatch);
+
+  if (openai) {
+    return generateObject({
+      model: openai(MODEL),
+      messages: [{
+        'role': 'user',
+        'content': [
+          {
+            'type': 'text',
+            'text': query,
+          }, {
+            'type': 'image',
+            'image': removeBase64Prefix(imageBase64),
+          },
+        ],
+      }],
+      schema,
+    }).then(result => Object.fromEntries(Object
+      .entries(result.object || {})
+      .map(([k, v]) => [k, cleanUpAiTextResponse(v as string)]),
+    ) as z.infer<T>);
+  } else {
+    throw new Error('No OpenAI client');
   }
 };
 

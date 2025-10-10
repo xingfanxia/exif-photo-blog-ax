@@ -6,32 +6,37 @@ export const getNavSortControlFromString = (
   navSortControl = '',
 ): NavSortControl => {
   switch (navSortControl.toLocaleLowerCase()) {
-  case 'none': return 'none';
-  case 'toggle': return 'toggle';
-  case 'menu': return 'menu';
-  default: return NAV_SORT_CONTROL_DEFAULT;
+    case 'none': return 'none';
+    case 'toggle': return 'toggle';
+    case 'menu': return 'menu';
+    default: return NAV_SORT_CONTROL_DEFAULT;
   }
 };
 
 export const SORT_BY_OPTIONS = [{
   sortBy: 'takenAt',
-  string: 'taken-at',
-  label: 'Taken At (Newest First)',
+  configKey: 'taken-at',
 }, {
   sortBy: 'takenAtAsc',
-  string: 'taken-at-oldest-first',
-  label: 'Taken At (Oldest First)',
+  configKey: 'taken-at-oldest-first',
 }, {
   sortBy: 'createdAt',
-  string: 'uploaded-at',
-  label: 'Uploaded At (Newest First)',
+  configKey: 'uploaded-at',
 }, {
   sortBy: 'createdAtAsc',
-  string: 'uploaded-at-oldest-first',
-  label: 'Uploaded At (Oldest First)',
+  configKey: 'uploaded-at-oldest-first',
+}, {
+  sortBy: 'color',
+  configKey: undefined,
+}, {
+  sortBy: 'colorAsc',
+  configKey: undefined,
 }] as const;
 
 export type SortBy = (typeof SORT_BY_OPTIONS)[number]['sortBy'];
+
+export const DEFAULT_SORT_BY_OPTIONS = SORT_BY_OPTIONS
+  .filter(({ configKey }) => configKey);
 
 export const APP_DEFAULT_SORT_BY: SortBy = 'takenAt';
 
@@ -46,13 +51,17 @@ export interface SortProps {
 
 export const getSortByFromString = (sortBy = ''): SortBy => {
   switch (sortBy) {
-  case 'taken-at': return 'takenAt';
-  case 'taken-at-oldest-first': return 'takenAtAsc';
-  case 'uploaded-at': return 'createdAt';
-  case 'uploaded-at-oldest-first': return 'createdAtAsc';
-  default:return 'takenAt';
+    case 'taken-at': return 'takenAt';
+    case 'taken-at-oldest-first': return 'takenAtAsc';
+    case 'uploaded-at': return 'createdAt';
+    case 'uploaded-at-oldest-first': return 'createdAtAsc';
+    case 'color': return 'color';
+    case 'color-ascending': return 'colorAsc';
+    default: return 'takenAt';
   }
 };
 
 export const isSortAscending = (sortBy: SortBy) =>
-  sortBy === 'takenAtAsc' || sortBy === 'createdAtAsc';
+  sortBy === 'takenAtAsc' ||
+  sortBy === 'createdAtAsc' ||
+  sortBy === 'colorAsc';

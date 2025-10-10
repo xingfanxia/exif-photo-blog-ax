@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  PATH_ADMIN_ALBUMS,
   PATH_ADMIN_CONFIGURATION,
   PATH_ADMIN_INSIGHTS,
   PATH_ADMIN_PHOTOS,
@@ -8,14 +9,13 @@ import {
   PATH_ADMIN_RECIPES,
   PATH_ADMIN_TAGS,
   PATH_ADMIN_UPLOADS,
-  PATH_GRID_INFERRED,
 } from '@/app/path';
 import { useAppState } from '@/app/AppState';
 import { IoArrowDown, IoArrowUp } from 'react-icons/io5';
 import { clsx } from 'clsx/lite';
 import AdminAppInfoIcon from './AdminAppInfoIcon';
 import { signOutAction } from '@/auth/actions';
-import { ComponentProps, useEffect, useMemo } from 'react';
+import { ComponentProps, useMemo } from 'react';
 import useIsKeyBeingPressed from '@/utility/useIsKeyBeingPressed';
 import IconPhoto from '@/components/icons/IconPhoto';
 import IconUpload from '@/components/icons/IconUpload';
@@ -31,8 +31,9 @@ import Spinner from '@/components/Spinner';
 import { useAppText } from '@/i18n/state/client';
 import SwitcherItemMenu from '@/components/switcher/SwitcherItemMenu';
 import { MoreMenuSection } from '@/components/more/MoreMenu';
-import { usePathname } from 'next/navigation';
 import { FiXSquare } from 'react-icons/fi';
+import { useSelectPhotosState } from './select/SelectPhotosState';
+import IconAlbum from '@/components/icons/IconAlbum';
 
 export default function AdminAppMenu({
   isOpen,
@@ -41,31 +42,26 @@ export default function AdminAppMenu({
   isOpen?: boolean
   setIsOpen?: (isOpen: boolean) => void
 }) {
-  const pathname = usePathname();
-
   const {
     photosCountTotal = 0,
     photosCountNeedSync = 0,
     uploadsCount = 0,
+    albumsCount = 0,
     tagsCount = 0,
     recipesCount = 0,
-    selectedPhotoIds,
     isLoadingAdminData,
     startUpload,
-    setSelectedPhotoIds,
     refreshAdminData,
     clearAuthStateAndRedirectIfNecessary,
   } = useAppState();
 
-  useEffect(() => {
-    if (pathname !== PATH_GRID_INFERRED) {
-      setSelectedPhotoIds?.(undefined);
-    }
-  }, [pathname, setSelectedPhotoIds]);
+  const {
+    isSelectingPhotos,
+    startSelectingPhotos,
+    stopSelectingPhotos,
+  } = useSelectPhotosState();
 
   const appText = useAppText();
-
-  const isSelecting = selectedPhotoIds !== undefined;
 
   const isAltPressed = useIsKeyBeingPressed('alt');
 
@@ -90,8 +86,8 @@ export default function AdminAppMenu({
         label: appText.admin.uploadPlural,
         annotation: `${uploadsCount}`,
         icon: <IconFolder
-          size={16}
-          className="translate-x-[1px] translate-y-[0.5px]"
+          size={15}
+          className="translate-x-[0.5px] translate-y-[0.5px]"
         />,
         href: PATH_ADMIN_UPLOADS,
       });
@@ -100,7 +96,7 @@ export default function AdminAppMenu({
       items.push({
         label: appText.admin.updatePlural,
         annotation: <>
-          <span className="mr-3">
+          <span className="mr-3 text-blue-500">
             {photosCountNeedSync}
           </span>
           <InsightsIndicatorDot
@@ -129,6 +125,17 @@ export default function AdminAppMenu({
         href: PATH_ADMIN_PHOTOS,
       });
     }
+    if (albumsCount) {
+      items.push({
+        label: appText.admin.manageAlbums,
+        annotation: `${albumsCount}`,
+        icon: <IconAlbum
+          size={15}
+          className="translate-x-[-0.5px] translate-y-[0.5px]"
+        />,
+        href: PATH_ADMIN_ALBUMS,
+      });
+    }
     if (tagsCount) {
       items.push({
         label: appText.admin.manageTags,
@@ -153,10 +160,10 @@ export default function AdminAppMenu({
     }
     if (photosCountTotal) {
       items.push({
-        label: isSelecting
-          ? appText.admin.batchExitEdit
-          : appText.admin.batchEditShort,
-        icon: isSelecting
+        label: isSelectingPhotos
+          ? appText.admin.selectPhotosExit
+          : appText.admin.selectPhotos,
+        icon: isSelectingPhotos
           ? <FiXSquare
             size={15}
             className="translate-x-[-0.75px] translate-y-[0.5px]"
@@ -165,16 +172,9 @@ export default function AdminAppMenu({
             size={16}
             className="translate-x-[-0.5px] translate-y-[0.5px]"
           />,
-        ...pathname !== PATH_GRID_INFERRED && {
-          href: PATH_GRID_INFERRED,
-        },
-        action: () => {
-          if (isSelecting) {
-            setSelectedPhotoIds?.(undefined);
-          } else {
-            setSelectedPhotoIds?.([]);
-          }
-        },
+        action: isSelectingPhotos
+          ? stopSelectingPhotos
+          : startSelectingPhotos,
       });
     }
     items.push({
@@ -192,14 +192,15 @@ export default function AdminAppMenu({
 
     return { items };
   }, [
-    pathname,
     appText,
-    isSelecting,
+    isSelectingPhotos,
+    startSelectingPhotos,
+    stopSelectingPhotos,
     photosCountNeedSync,
     photosCountTotal,
     recipesCount,
-    setSelectedPhotoIds,
     showAppInsightsLink,
+    albumsCount,
     tagsCount,
     uploadsCount,
   ]);

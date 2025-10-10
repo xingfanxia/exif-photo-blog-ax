@@ -15,10 +15,11 @@ import { Photo } from '.';
 import { PhotoSetCategory } from '../category';
 import { clsx } from 'clsx/lite';
 import { useAppState } from '@/app/AppState';
-import useVisible from '@/utility/useVisible';
+import useVisibility from '@/utility/useVisibility';
 import { ADMIN_DB_OPTIMIZE_ENABLED } from '@/app/config';
 import { SortBy } from './sort';
 import { SWR_KEYS } from '@/swr';
+import { useAppText } from '@/i18n/state/client';
 
 const SIZE_KEY_SEPARATOR = '__';
 const getSizeFromKey = (key: string) =>
@@ -63,6 +64,8 @@ export default function InfinitePhotoScroll({
   }) => ReactNode
 } & PhotoSetCategory) {
   const { isUserSignedIn } = useAppState();
+  
+  const { utility } = useAppText();
 
   const keyGenerator = useCallback(
     (size: number, prev: Photo[]) => prev && prev.length === 0
@@ -150,7 +153,7 @@ export default function InfinitePhotoScroll({
     },
   } as any), [data, mutate]);
 
-  useVisible({ ref: buttonContainerRef, onVisible: () => {
+  useVisibility({ ref: buttonContainerRef, onVisible: () => {
     if (ADMIN_DB_OPTIMIZE_ENABLED && size === 0) {
       advance();
     }
@@ -168,10 +171,10 @@ export default function InfinitePhotoScroll({
         )}
       >
         {error
-          ? 'Try Again'
+          ? utility.tryAgain
           : isLoadingOrValidating
             ? <Spinner size={20} />
-            : 'Load More'}
+            : utility.loadMore}
       </button>
     </div>;
 

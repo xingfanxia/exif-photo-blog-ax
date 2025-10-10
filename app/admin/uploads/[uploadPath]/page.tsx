@@ -8,12 +8,14 @@ import {
 } from '@/photo/cache';
 import UploadPageClient from '@/photo/UploadPageClient';
 import {
-  AI_TEXT_AUTO_GENERATED_FIELDS,
-  AI_TEXT_GENERATION_ENABLED,
+  AI_CONTENT_GENERATION_ENABLED,
   BLUR_ENABLED,
 } from '@/app/config';
 import ErrorNote from '@/components/ErrorNote';
-import { getRecipeTitleForData } from '@/photo/db/query';
+import { getRecipeTitleForData } from '@/photo/query';
+import { getAlbumsWithMeta } from '@/album/query';
+import { addAiTextToFormData } from '@/photo/ai/server';
+import AppGrid from '@/components/AppGrid';
 
 export const maxDuration = 60;
 
@@ -26,21 +28,31 @@ export default async function UploadPage({ params, searchParams }: Params) {
   const uploadPath = (await params).uploadPath;
   const title = (await searchParams)[PARAM_UPLOAD_TITLE];
 
-  const {
-    blobId,
-    formDataFromExif,
-    imageResizedBase64: imageThumbnailBase64,
-    shouldStripGpsData,
-    error,
-  } = await extractImageDataFromBlobPath(uploadPath, {
-    includeInitialPhotoFields: true,
-    generateBlurData: BLUR_ENABLED,
-    generateResizedImage: AI_TEXT_GENERATION_ENABLED,
-  });
+  const [
+    albums,
+    uniqueRecipes,
+    uniqueFilms,
+    uniqueTags, {
+      blobId,
+      formDataFromExif: _formDataFromExif,
+      imageResizedBase64: imageThumbnailBase64,
+      shouldStripGpsData,
+      error,
+    }] = await Promise.all([
+    getAlbumsWithMeta(),
+    getUniqueRecipesCached(),
+    getUniqueFilmsCached(),
+    getUniqueTagsCached(),
+    extractImageDataFromBlobPath(uploadPath, {
+      includeInitialPhotoFields: true,
+      generateBlurData: BLUR_ENABLED,
+      generateResizedImage: AI_CONTENT_GENERATION_ENABLED,
+    }),
+  ]);
 
   const isDataMissing =
-    !formDataFromExif ||
-    (AI_TEXT_GENERATION_ENABLED && !imageThumbnailBase64);
+    !_formDataFromExif ||
+    (AI_CONTENT_GENERATION_ENABLED && !imageThumbnailBase64);
 
   if (isDataMissing && !error) {
     // Only redirect if there's no error to report
@@ -48,24 +60,23 @@ export default async function UploadPage({ params, searchParams }: Params) {
   }
 
   const [
-    uniqueTags,
-    uniqueRecipes,
-    uniqueFilms,
     recipeTitle,
+    formDataFromExif,
   ] = await Promise.all([
-    getUniqueTagsCached(),
-    getUniqueRecipesCached(),
-    getUniqueFilmsCached(),
-    formDataFromExif?.recipeData && formDataFromExif.film
+    _formDataFromExif?.recipeData && _formDataFromExif.film
       ? getRecipeTitleForData(
-        formDataFromExif.recipeData,
-        formDataFromExif.film,
+        _formDataFromExif.recipeData, 
+        _formDataFromExif.film,
       )
       : undefined,
+    addAiTextToFormData({
+      formData: _formDataFromExif,
+      imageBase64: imageThumbnailBase64,
+      uniqueTags,
+    }),
   ]);
 
-  const hasAiTextGeneration = AI_TEXT_GENERATION_ENABLED;
-  let textFieldsToAutoGenerate = AI_TEXT_AUTO_GENERATED_FIELDS;
+  const hasAiTextGeneration = AI_CONTENT_GENERATION_ENABLED;
 
   if (formDataFromExif) {
     if (recipeTitle) {
@@ -73,8 +84,6 @@ export default async function UploadPage({ params, searchParams }: Params) {
     }
     if (typeof title === 'string') {
       formDataFromExif.title = title;
-      textFieldsToAutoGenerate = textFieldsToAutoGenerate
-        .filter(field => field !== 'title');
     }
   }
 
@@ -83,16 +92,18 @@ export default async function UploadPage({ params, searchParams }: Params) {
       ? <UploadPageClient {...{
         blobId,
         formDataFromExif,
+        albums,
         uniqueTags,
         uniqueRecipes,
         uniqueFilms,
         hasAiTextGeneration,
-        textFieldsToAutoGenerate,
         imageThumbnailBase64,
         shouldStripGpsData,
       }} />
-      : <ErrorNote>
-        {error ?? 'Unknown error'}
-      </ErrorNote>
+      : <AppGrid contentMain={
+        <ErrorNote>
+          {error ?? 'Unknown error'}
+        </ErrorNote>
+      }/>
   );
 };

@@ -1,9 +1,9 @@
-import { Photo, PhotoDateRange } from '@/photo';
+import { Photo, PhotoDateRangePostgres } from '@/photo';
 import PhotoTag from './PhotoTag';
 import { descriptionForTaggedPhotos, isTagFavs } from '.';
 import PhotoHeader from '@/photo/PhotoHeader';
 import PhotoFavs from './PhotoFavs';
-import { AI_TEXT_GENERATION_ENABLED } from '@/app/config';
+import { AI_CONTENT_GENERATION_ENABLED } from '@/app/config';
 import { getAppText } from '@/i18n/state/server';
 
 export default async function TagHeader({
@@ -19,7 +19,7 @@ export default async function TagHeader({
   selectedPhoto?: Photo
   indexNumber?: number
   count?: number
-  dateRange?: PhotoDateRange
+  dateRange?: PhotoDateRangePostgres
 }) {
   const appText = await getAppText();
   return (
@@ -28,12 +28,13 @@ export default async function TagHeader({
       entity={isTagFavs(tag) 
         ? <PhotoFavs
           contrast="high"
-          showHover={false}
+          hoverType="none"
         />
         : <PhotoTag
           tag={tag}
           contrast="high"
-          showHover={false}
+          hoverType="none"
+          showAdminMenu
         />}
       entityVerb={appText.category.tagged}
       entityDescription={descriptionForTaggedPhotos(
@@ -47,7 +48,7 @@ export default async function TagHeader({
       indexNumber={indexNumber}
       count={count}
       dateRange={dateRange}
-      hasAiTextGeneration={AI_TEXT_GENERATION_ENABLED}
+      hasAiTextGeneration={AI_CONTENT_GENERATION_ENABLED}
       includeShareButton
     />
   );

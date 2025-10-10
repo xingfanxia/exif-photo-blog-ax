@@ -28,8 +28,9 @@ export type AppStateContextType = {
   clearNextPhotoAnimation?: (id?: string) => void
   shouldRespondToKeyboardCommands?: boolean
   setShouldRespondToKeyboardCommands?: Dispatch<SetStateAction<boolean>>
-  categoriesWithCounts?:
-    Awaited<ReturnType<typeof getCountsForCategoriesCachedAction>>
+  categoriesWithCounts?: Awaited<ReturnType<
+    typeof getCountsForCategoriesCachedAction
+  >>
   // MODAL
   isCommandKOpen?: boolean
   setIsCommandKOpen?: Dispatch<SetStateAction<boolean>>
@@ -52,10 +53,6 @@ export type AppStateContextType = {
   isLoadingAdminData?: boolean
   refreshAdminData?: () => void
   updateAdminData?: (updatedData: Partial<AdminData>) => void
-  selectedPhotoIds?: string[]
-  setSelectedPhotoIds?: Dispatch<SetStateAction<string[] | undefined>>
-  isPerformingSelectEdit?: boolean
-  setIsPerformingSelectEdit?: Dispatch<SetStateAction<boolean>>
   insightsIndicatorStatus?: InsightsIndicatorStatus
   // UPLOAD
   startUpload?: () => Promise<boolean>

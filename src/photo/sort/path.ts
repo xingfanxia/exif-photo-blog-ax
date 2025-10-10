@@ -3,8 +3,9 @@
 
 import {
   doesPathOfferSort as _doesPathOfferSort,
-  PARAM_SORT_ORDER_NEWEST,
-  PARAM_SORT_ORDER_OLDEST,
+  PARAM_SORT_ORDER_ASCENDING,
+  PARAM_SORT_ORDER_DESCENDING,
+  PARAM_SORT_TYPE_COLOR,
   PARAM_SORT_TYPE_TAKEN_AT,
   PARAM_SORT_TYPE_UPLOADED_AT,
   PATH_FULL_INFERRED,
@@ -16,28 +17,37 @@ import {
   GRID_HOMEPAGE_ENABLED,
   USER_DEFAULT_SORT_WITH_PRIORITY,
 } from '@/app/config';
+import { AppTextState } from '@/i18n/state';
 
 const getSortByComponents = (sortBy: SortBy): {
   sortType: string
   sortOrder: string
 } => {
   switch (sortBy) {
-  case 'takenAt': return {
-    sortType: PARAM_SORT_TYPE_TAKEN_AT,
-    sortOrder: PARAM_SORT_ORDER_NEWEST,
-  };
-  case 'takenAtAsc': return {
-    sortType: PARAM_SORT_TYPE_TAKEN_AT,
-    sortOrder: PARAM_SORT_ORDER_OLDEST,
-  };
-  case 'createdAt': return {
-    sortType: PARAM_SORT_TYPE_UPLOADED_AT,
-    sortOrder: PARAM_SORT_ORDER_NEWEST,
-  };
-  case 'createdAtAsc': return {
-    sortType: PARAM_SORT_TYPE_UPLOADED_AT,
-    sortOrder: PARAM_SORT_ORDER_OLDEST,
-  };
+    case 'takenAt': return {
+      sortType: PARAM_SORT_TYPE_TAKEN_AT,
+      sortOrder: PARAM_SORT_ORDER_DESCENDING,
+    };
+    case 'takenAtAsc': return {
+      sortType: PARAM_SORT_TYPE_TAKEN_AT,
+      sortOrder: PARAM_SORT_ORDER_ASCENDING,
+    };
+    case 'createdAt': return {
+      sortType: PARAM_SORT_TYPE_UPLOADED_AT,
+      sortOrder: PARAM_SORT_ORDER_DESCENDING,
+    };
+    case 'createdAtAsc': return {
+      sortType: PARAM_SORT_TYPE_UPLOADED_AT,
+      sortOrder: PARAM_SORT_ORDER_ASCENDING,
+    };
+    case 'color': return {
+      sortType: PARAM_SORT_TYPE_COLOR,
+      sortOrder: PARAM_SORT_ORDER_DESCENDING,
+    };
+    case 'colorAsc': return {
+      sortType: PARAM_SORT_TYPE_COLOR,
+      sortOrder: PARAM_SORT_ORDER_ASCENDING,
+    };
   }
 };
 
@@ -54,20 +64,26 @@ const _getSortOptionsFromParams = (
   sortWithPriority: boolean
 } => {
   let sortBy: SortBy = 'takenAt';
-  const isAscending = sortOrder === PARAM_SORT_ORDER_OLDEST;
+  const isAscending = sortOrder === PARAM_SORT_ORDER_ASCENDING;
   switch (sortType) {
-  case PARAM_SORT_TYPE_TAKEN_AT: {
-    sortBy = isAscending
-      ? 'takenAtAsc'
-      : 'takenAt';
-    break;
-  }
-  case PARAM_SORT_TYPE_UPLOADED_AT: {
-    sortBy = isAscending
-      ? 'createdAtAsc'
-      : 'createdAt';
-    break;
-  }
+    case PARAM_SORT_TYPE_TAKEN_AT: {
+      sortBy = isAscending
+        ? 'takenAtAsc'
+        : 'takenAt';
+      break;
+    }
+    case PARAM_SORT_TYPE_UPLOADED_AT: {
+      sortBy = isAscending
+        ? 'createdAtAsc'
+        : 'createdAt';
+      break;
+    }
+    case PARAM_SORT_TYPE_COLOR: {
+      sortBy = isAscending
+        ? 'colorAsc'
+        : 'color';
+      break;
+    }
   }
   return {
     sortBy,
@@ -96,7 +112,10 @@ const getPathSortComponents = (pathname: string) => {
   };
 };
 
-export const getSortStateFromPath = (pathname: string) => {
+export const getSortStateFromPath = (
+  pathname: string,
+  appText: AppTextState,
+) => {
   const doesPathOfferSort = _doesPathOfferSort(pathname);
 
   const {
@@ -107,12 +126,21 @@ export const getSortStateFromPath = (pathname: string) => {
   } = getPathSortComponents(pathname);
 
   const isSortedByDefault = sortBy === USER_DEFAULT_SORT_BY;
-  const sortOrderReversed = sortOrder === PARAM_SORT_ORDER_OLDEST
-    ? PARAM_SORT_ORDER_NEWEST
-    : PARAM_SORT_ORDER_OLDEST;
-  const isAscending = sortOrder === PARAM_SORT_ORDER_OLDEST;
+  const sortOrderReversed = sortOrder === PARAM_SORT_ORDER_DESCENDING
+    ? PARAM_SORT_ORDER_ASCENDING
+    : PARAM_SORT_ORDER_DESCENDING;
+  const isAscending = sortOrder === PARAM_SORT_ORDER_ASCENDING;
   const isTakenAt = sortType === PARAM_SORT_TYPE_TAKEN_AT;
   const isUploadedAt = sortType === PARAM_SORT_TYPE_UPLOADED_AT;
+  const isColor = sortType === PARAM_SORT_TYPE_COLOR;
+
+  const descendingLabel = isColor
+    ? appText.sort.descending
+    : appText.sort.newestFirst;
+
+  const ascendingLabel = isColor
+    ? appText.sort.ascending
+    : appText.sort.oldestFirst;
 
   const getPath = ({
     gridOrFull = _gridOrFull,
@@ -147,14 +175,16 @@ export const getSortStateFromPath = (pathname: string) => {
     getPath({ sortType, sortOrder: sortOrderReversed });
 
   // Sort menu paths
-  const pathNewest =
-    getPath({ sortType, sortOrder: PARAM_SORT_ORDER_NEWEST });
-  const pathOldest =
-    getPath({ sortType, sortOrder: PARAM_SORT_ORDER_OLDEST });
+  const pathDescending =
+    getPath({ sortType, sortOrder: PARAM_SORT_ORDER_DESCENDING });
+  const pathAscending =
+    getPath({ sortType, sortOrder: PARAM_SORT_ORDER_ASCENDING });
   const pathTakenAt =
     getPath({ sortType: PARAM_SORT_TYPE_TAKEN_AT, sortOrder });
   const pathUploadedAt =
     getPath({ sortType: PARAM_SORT_TYPE_UPLOADED_AT, sortOrder });
+  const pathColor =
+    getPath({ sortType: PARAM_SORT_TYPE_COLOR, sortOrder });
 
   // Sort clear
   const pathClearSort = _gridOrFull === 'grid'
@@ -168,12 +198,16 @@ export const getSortStateFromPath = (pathname: string) => {
     isAscending,
     isTakenAt,
     isUploadedAt,
+    isColor,
+    descendingLabel,
+    ascendingLabel,
     pathGrid,
     pathFull,
-    pathNewest,
-    pathOldest,
+    pathDescending,
+    pathAscending,
     pathTakenAt,
     pathUploadedAt,
+    pathColor,
     pathClearSort,
     pathSortToggle,
   };

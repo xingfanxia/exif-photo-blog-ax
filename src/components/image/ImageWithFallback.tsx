@@ -5,9 +5,10 @@ import { BLUR_ENABLED } from '@/app/config';
 import { useAppState } from '@/app/AppState';
 import { clsx}  from 'clsx/lite';
 import Image, { ImageProps } from 'next/image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
 export default function ImageWithFallback({
+  ref: refProp,
   className,
   classNameImage = 'object-cover h-full',
   blurDataURL,
@@ -15,6 +16,7 @@ export default function ImageWithFallback({
   priority,
   ...props
 }: ImageProps & {
+  ref?: RefObject<HTMLImageElement | null>
   blurCompatibilityLevel?: 'none' | 'low' | 'high'
   classNameImage?: string
 }) {
@@ -41,11 +43,11 @@ export default function ImageWithFallback({
 
   const getBlurClass = () => {
     switch (blurCompatibilityLevel) {
-    case 'high':
+      case 'high':
       // Fix poorly blurred placeholder data generated on client
-      return 'blur-[4px] @xs:blue-md scale-[1.05]';
-    case 'low':
-      return 'blur-[2px] @xs:blue-md scale-[1.01]';
+        return 'blur-[4px] @xs:blue-md scale-[1.05]';
+      case 'low':
+        return 'blur-[2px] @xs:blue-md scale-[1.01]';
     }
   };
 
@@ -56,7 +58,7 @@ export default function ImageWithFallback({
         className,
       )}
     >
-      <Image ref={ref} {...{
+      <Image ref={refProp ?? ref} {...{
         ...props,
         priority,
         className: classNameImage,

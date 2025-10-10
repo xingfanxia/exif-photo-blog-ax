@@ -1,6 +1,6 @@
 import {
   Photo,
-  PhotoDateRange,
+  PhotoDateRangePostgres,
   descriptionForPhotoSet,
   photoQuantityText,
 } from '@/photo';
@@ -93,12 +93,16 @@ export const sortTagsWithoutFavs = (tags: string[]) =>
 export const sortTagsObjectWithoutFavs = (tags: Tags) =>
   sortTags(tags, TAG_FAVS);
 
+export const getTopNonFavTags = (tags: Tags) => tags
+  .filter(({ tag }) => tag !== TAG_FAVS)
+  .slice(0, 3);
+
 export const descriptionForTaggedPhotos = (
   photos: Photo[] = [],
   appText: AppTextState,
   dateBased?: boolean,
   explicitCount?: number,
-  explicitDateRange?: PhotoDateRange,
+  explicitDateRange?: PhotoDateRangePostgres,
 ) =>
   descriptionForPhotoSet(
     photos,
@@ -114,7 +118,7 @@ export const generateMetaForTag = (
   photos: Photo[],
   appText: AppTextState,
   explicitCount?: number,
-  explicitDateRange?: PhotoDateRange,
+  explicitDateRange?: PhotoDateRangePostgres,
 ) => ({
   url: absolutePathForTag(tag),
   title: titleForTag(tag, photos, appText, explicitCount),
@@ -127,6 +131,14 @@ export const generateMetaForTag = (
   ),
   images: absolutePathForTagImage(tag),
 });
+
+export const deleteTagConfirmationText = (
+  tag: string,
+  count: number,
+  appText: AppTextState,
+) =>
+  // eslint-disable-next-line max-len
+  `Are you sure you want to remove "${formatTag(tag)}" from ${photoQuantityText(count, appText, false, false).toLowerCase()}?`;
 
 export const isTagFavs = (tag: string) => tag.toLocaleLowerCase() === TAG_FAVS;
 
@@ -181,3 +193,6 @@ export const limitTagsByCount = (
       .toLocaleLowerCase()
       .includes(queryToInclude.toLocaleLowerCase()))
   ));
+
+export const tagsHaveFavs = (tags: Tags) =>
+  tags.some(({ tag }) => isTagFavs(tag));

@@ -41,3 +41,10 @@ export const downloadFileFromBrowser = async (
   document.body.removeChild(link);
   window.URL.revokeObjectURL(downloadUrl);
 };
+
+// Necessary for useClientSearchParams to see window.location changes,
+// particularly for paths that only change query params
+export const replacePathWithEvent = (pathname: string) => {
+  window.history.pushState(null, '', pathname);
+  dispatchEvent(new Event('replacestate'));
+};

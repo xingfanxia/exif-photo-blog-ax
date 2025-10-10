@@ -1,6 +1,5 @@
 'use client';
 
-import { uploadPhotoFromClient } from '@/platforms/storage';
 import { usePathname, useRouter } from 'next/navigation';
 import { PATH_ADMIN_UPLOADS, pathForAdminUploadUrl } from '@/app/path';
 import ImageInput from '../components/ImageInput';
@@ -10,6 +9,7 @@ import { RefObject, useTransition, useRef, useEffect } from 'react';
 import Spinner from '@/components/Spinner';
 import ResponsiveText from '@/components/primitives/ResponsiveText';
 import { useAppText } from '@/i18n/state/client';
+import { uploadPhotoFromClient } from './storage';
 
 export default function PhotoUploadWithStatus({
   inputRef,
@@ -167,19 +167,19 @@ export default function PhotoUploadWithStatus({
             {isUploading
               ? isFinishing
                 ? <>
-                  {appText.misc.finishing}
+                  {appText.utility.finishing}
                 </>
                 : <>
                   {!showButton && uploadStatusText
                     ? <>
                       <ResponsiveText shortText={uploadStatusText}>
-                        {appText.misc.uploading} {uploadStatusText}
+                        {appText.utility.uploading} {uploadStatusText}
                       </ResponsiveText>
                       {': '}
                       {fileUploadName}
                     </>
                     : <ResponsiveText shortText={fileUploadName}>
-                      {appText.misc.uploading} {fileUploadName}
+                      {appText.utility.uploading} {fileUploadName}
                     </ResponsiveText>}
                 </>
               : !showButton && <>Initializing</>}

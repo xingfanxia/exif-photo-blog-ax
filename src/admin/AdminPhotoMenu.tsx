@@ -20,7 +20,6 @@ import {
 } from '@/photo';
 import { isPathFavs, isPhotoFav, TAG_PRIVATE } from '@/tag';
 import { usePathname } from 'next/navigation';
-import { BiTrash } from 'react-icons/bi';
 import MoreMenu, { MoreMenuSection } from '@/components/more/MoreMenu';
 import { useAppState } from '@/app/AppState';
 import { RevalidatePhoto } from '@/photo/InfinitePhotoScroll';
@@ -30,10 +29,11 @@ import IconGrSync from '@/components/icons/IconGrSync';
 import InsightsIndicatorDot from './insights/InsightsIndicatorDot';
 import IconFavs from '@/components/icons/IconFavs';
 import IconEdit from '@/components/icons/IconEdit';
-import { photoNeedsToBeSynced } from '@/photo/sync';
+import { photoNeedsToBeUpdated } from '@/photo/update';
 import { KEY_COMMANDS } from '@/photo/key-commands';
 import { useAppText } from '@/i18n/state/client';
 import IconLock from '@/components/icons/IconLock';
+import IconTrash from '@/components/icons/IconTrash';
 
 export default function AdminPhotoMenu({
   photo,
@@ -62,7 +62,6 @@ export default function AdminPhotoMenu({
       ? pathForTag(TAG_PRIVATE)
       : PATH_ROOT
     : undefined;
-
 
   const sectionMain = useMemo(() => {
     const items: ComponentProps<typeof MoreMenuItem>[] = [{
@@ -124,7 +123,7 @@ export default function AdminPhotoMenu({
       label: appText.admin.sync,
       labelComplex: <span className="inline-flex items-center gap-2">
         <span>{appText.admin.sync}</span>
-        {photoNeedsToBeSynced(photo) &&
+        {photoNeedsToBeUpdated(photo) &&
           <InsightsIndicatorDot
             colorOverride="blue"
             className="ml-1 translate-y-[1.5px]"
@@ -154,8 +153,7 @@ export default function AdminPhotoMenu({
   const sectionDelete: MoreMenuSection = useMemo(() => ({
     items: [{
       label: appText.admin.delete,
-      icon: <BiTrash
-        size={15}
+      icon: <IconTrash
         className="translate-x-[-1px]"
       />,
       className: 'text-error *:hover:text-error',

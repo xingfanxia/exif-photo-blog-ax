@@ -17,8 +17,8 @@ import {
   getUniqueLenses,
   getUniqueRecipes,
   getUniqueYears,
-} from '@/photo/db/query';
-import { PhotoQueryOptions } from './db';
+} from '@/photo/query';
+import { PhotoQueryOptions } from '@/db';
 import { parseCachedPhotoDates, parseCachedPhotosDates } from '@/photo';
 import { createCameraKey } from '@/camera';
 import {
@@ -36,6 +36,7 @@ import {
   PREFIX_TAG,
   pathForPhoto,
   PREFIX_YEAR,
+  PREFIX_ALBUM,
 } from '@/app/path';
 import { createLensKey } from '@/lens';
 
@@ -45,6 +46,7 @@ const KEY_PHOTO             = 'photo';
 // Field keys
 const KEY_CAMERAS           = 'cameras';
 const KEY_LENSES            = 'lenses';
+const KEY_ALBUMS            = 'albums';
 const KEY_TAGS              = 'tags';
 const KEY_FILMS             = 'films';
 const KEY_RECIPES           = 'recipes';
@@ -60,24 +62,28 @@ const getCacheKeyForPhotoQueryOptions = (
 ): string | null => {
   switch (option) {
   // Complex keys
-  case 'camera': {
-    const value = options[option];
-    return value ? `${option}-${createCameraKey(value)}` : null;
-  }
-  case 'lens': {
-    const value = options[option];
-    return value ? `${option}-${createLensKey(value)}` : null;
-  }
-  case 'takenBefore':
-  case 'takenAfterInclusive': 
-  case 'updatedBefore': {
-    const value = options[option];
-    return value ? `${option}-${value.toISOString()}` : null;
-  }
-  // Primitive keys
-  default:
-    const value = options[option];
-    return value !== undefined ? `${option}-${value}` : null;
+    case 'camera': {
+      const camera = options[option];
+      return camera ? `${option}-${createCameraKey(camera)}` : null;
+    }
+    case 'lens': {
+      const lens = options[option];
+      return lens ? `${option}-${createLensKey(lens)}` : null;
+    }
+    case 'album': {
+      const album = options[option];
+      return album ? album.slug : null;
+    }
+    case 'takenBefore':
+    case 'takenAfterInclusive': 
+    case 'updatedBefore': {
+      const value = options[option];
+      return value ? `${option}-${value.toISOString()}` : null;
+    }
+    // Primitive keys
+    default:
+      const value = options[option];
+      return value !== undefined ? `${option}-${value}` : null;
   }
 };
 
@@ -97,6 +103,9 @@ const getPhotosCacheKeys = (options: PhotoQueryOptions = {}) => {
 
 export const revalidatePhotosKey = () =>
   revalidateTag(KEY_PHOTOS);
+
+export const revalidateAlbumsKey = () =>
+  revalidateTag(KEY_ALBUMS);
 
 export const revalidateTagsKey = () =>
   revalidateTag(KEY_TAGS);
@@ -121,6 +130,7 @@ export const revalidateYearsKey = () =>
 
 export const revalidateAllKeys = () => {
   revalidatePhotosKey();
+  revalidateAlbumsKey();
   revalidateTagsKey();
   revalidateCamerasKey();
   revalidateLensesKey();
@@ -142,21 +152,23 @@ export const revalidateAllKeysAndPaths = () => {
 export const revalidatePhoto = (photoId: string) => {
   // Tags
   revalidateTag(photoId);
-  revalidateTagsKey();
+  revalidateYearsKey();
   revalidateCamerasKey();
   revalidateLensesKey();
+  revalidateAlbumsKey();
+  revalidateTagsKey();
   revalidateFilmsKey();
   revalidateRecipesKey();
   revalidateFocalLengthsKey();
-  revalidateYearsKey();
   // Paths
   revalidatePath(pathForPhoto({ photo: photoId }), 'layout');
   revalidatePath(PATH_ROOT, 'layout');
   revalidatePath(PATH_GRID, 'layout');
   revalidatePath(PATH_FULL, 'layout');
-  revalidatePath(PREFIX_TAG, 'layout');
   revalidatePath(PREFIX_CAMERA, 'layout');
   revalidatePath(PREFIX_LENS, 'layout');
+  revalidatePath(PREFIX_ALBUM, 'layout');
+  revalidatePath(PREFIX_TAG, 'layout');
   revalidatePath(PREFIX_FILM, 'layout');
   revalidatePath(PREFIX_RECIPE, 'layout');
   revalidatePath(PREFIX_FOCAL_LENGTH, 'layout');
@@ -211,7 +223,7 @@ export const getPhotoCached = (...args: Parameters<typeof getPhoto>) =>
     getPhoto,
     [KEY_PHOTOS, KEY_PHOTO],
   )(...args).then(photo => photo ? parseCachedPhotoDates(photo) : undefined);
-
+  
 export const getUniqueTagsCached =
   unstable_cache(
     getUniqueTags,

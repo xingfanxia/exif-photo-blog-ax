@@ -10,21 +10,23 @@ import ResponsiveText from '../primitives/ResponsiveText';
 import { SHOW_CATEGORY_IMAGE_HOVERS } from '@/app/config';
 import EntityHover from './EntityHover';
 import { getPhotosCachedAction } from '@/photo/actions';
-import { PhotoQueryOptions } from '@/photo/db';
+import { PhotoQueryOptions } from '@/db';
 import { MAX_PHOTOS_TO_SHOW_PER_CATEGORY } from '@/image-response';
 
 export interface EntityLinkExternalProps {
   ref?: RefObject<HTMLSpanElement | null>
   type?: LabeledIconType
   badged?: boolean
+  badgeType?: ComponentProps<typeof Badge>['type']
   contrast?: ComponentProps<typeof Badge>['contrast']
   uppercase?: boolean
   prefetch?: boolean
   suppressSpinner?: boolean
   className?: string
-  countOnHover?: number
-  showHover?: boolean
-  hoverPhotoQueryOptions?: PhotoQueryOptions
+  truncate?: boolean
+  hoverCount?: number
+  hoverType?: 'auto' | 'text' | 'image' | 'none'
+  hoverQueryOptions?: PhotoQueryOptions
 }
 
 export default function EntityLink({
@@ -37,11 +39,12 @@ export default function EntityLink({
   iconWide,
   type,
   badged,
+  badgeType = 'small',
   contrast = 'medium',
   path = '', // Make link optional for debugging purposes
-  showHover = SHOW_CATEGORY_IMAGE_HOVERS,
-  countOnHover,
-  hoverPhotoQueryOptions,
+  hoverCount = 0,
+  hoverType = 'auto',
+  hoverQueryOptions,
   prefetch,
   title,
   action,
@@ -62,7 +65,6 @@ export default function EntityLink({
   prefetch?: boolean
   title?: string
   action?: ReactNode
-  truncate?: boolean
   className?: string
   classNameIcon?: string
   uppercase?: boolean
@@ -70,25 +72,40 @@ export default function EntityLink({
 } & EntityLinkExternalProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const hasBadgeIcon = Boolean(iconBadgeStart || iconBadgeEnd);
+  const hasBadgeIcon = Boolean(
+    iconBadgeStart ||
+    iconBadgeEnd ||
+    badgeType === 'medium',
+  );
 
   const classForContrast = () => {
     switch (contrast) {
-    case 'low':
-      return 'text-dim';
-    case 'high':
-      return 'text-main';
-    case 'frosted':
-      return 'text-black';
-    default:
-      return 'text-medium';
+      case 'low':
+        return 'text-dim';
+      case 'high':
+        return 'text-main';
+      case 'frosted':
+        return 'text-black';
+      default:
+        return 'text-medium';
     }
   };
 
-  const showHoverEntity =
+  const canShowHover =
     !isLoading &&
-    countOnHover &&
-    !showHover;
+    hoverCount > 0;
+
+  const showHoverImage =
+    canShowHover && SHOW_CATEGORY_IMAGE_HOVERS && (
+      hoverType === 'auto' ||
+      hoverType === 'image'
+    );
+
+  const showHoverText =
+    canShowHover && (
+      (hoverType === 'auto' && !SHOW_CATEGORY_IMAGE_HOVERS) ||
+      hoverType === 'text'
+    );
 
   const renderLabel =
     <ResponsiveText shortText={labelSmall}>
@@ -110,10 +127,12 @@ export default function EntityLink({
       setIsLoading={setIsLoading}
     >
       <LabeledIcon {...{
-        icon:
-          (badged && hasBadgeIcon && !useForHover) ? undefined : icon,
-        iconWide:
-          (badged && hasBadgeIcon && !useForHover) ? undefined : iconWide,
+        icon: badged && hasBadgeIcon && !useForHover
+          ? undefined
+          : icon,
+        iconWide: badged && hasBadgeIcon && !useForHover
+          ? undefined
+          : iconWide,
         prefetch,
         title,
         type: useForHover ? 'icon-first' : type,
@@ -127,18 +146,24 @@ export default function EntityLink({
       }}>
         {badged && !useForHover
           ? <Badge
-            type="small"
+            type={badgeType}
             contrast={contrast}
             className={clsx(
               'translate-y-[-0.5px]',
-              hasBadgeIcon && '*:flex *:items-center *:gap-1',
+              hasBadgeIcon && '*:flex *:items-center',
+              hasBadgeIcon && badgeType === 'medium'
+                ? '*:gap-[5px]'
+                : '*:gap-1',
+              suppressSpinner && isLoading && 'opacity-50',
             )}
             uppercase
             interactive
           >
-            {iconBadgeStart}
+            {badgeType === 'medium' &&
+              <span className="translate-y-[0.5px]">{icon}</span>}
+            {badgeType !== 'medium' && iconBadgeStart}
             {renderLabel}
-            {iconBadgeEnd}
+            {badgeType !== 'medium' && iconBadgeEnd}
           </Badge>
           : <span className={clsx(
             'text-content',
@@ -159,17 +184,18 @@ export default function EntityLink({
         'max-w-full overflow-hidden select-none',
         // Underline link text when action is hovered
         '[&:has(.action:hover)_.text-content]:underline',
+        !truncate && 'shrink-0',
         className,
       )}
     >
-      {showHover && countOnHover && hoverPhotoQueryOptions
+      {showHoverImage
         ? <EntityHover
           hoverKey={path}
           header={renderLink(true)}
-          photosCount={countOnHover}
+          photosCount={hoverCount}
           getPhotos={() =>
             getPhotosCachedAction({
-              ...hoverPhotoQueryOptions,
+              ...hoverQueryOptions,
               limit: MAX_PHOTOS_TO_SHOW_PER_CATEGORY,
             })}
           color={contrast === 'frosted' ? 'frosted' : undefined}
@@ -181,9 +207,9 @@ export default function EntityLink({
         <span className="action">
           {action}
         </span>}
-      {showHoverEntity &&
+      {showHoverText &&
         <span className="hidden peer-hover:inline text-dim">
-          {countOnHover}
+          {hoverCount}
         </span>}
       {isLoading && !suppressSpinner &&
         <Spinner

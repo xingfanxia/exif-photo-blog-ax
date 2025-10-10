@@ -35,7 +35,7 @@ import {
 import AdminPhotoMenu from '@/admin/AdminPhotoMenu';
 import { RevalidatePhoto } from './InfinitePhotoScroll';
 import { useCallback, useMemo, useRef } from 'react';
-import useVisible from '@/utility/useVisible';
+import useVisibility from '@/utility/useVisibility';
 import PhotoDate from './PhotoDate';
 import { useAppState } from '@/app/AppState';
 import { LuExpand } from 'react-icons/lu';
@@ -49,12 +49,13 @@ import PhotoRecipe from '@/recipe/PhotoRecipe';
 import PhotoLens from '@/lens/PhotoLens';
 import { lensFromPhoto } from '@/lens';
 import MaskedScroll from '@/components/MaskedScroll';
-import useCategoryCountsForPhoto from '@/category/useCategoryCountsForPhoto';
 import { useAppText } from '@/i18n/state/client';
+import { Album } from '@/album';
 
 export default function PhotoLarge({
   photo,
   className,
+  album,
   primaryTag,
   priority,
   prefetch = SHOULD_PREFETCH_ALL_LINKS,
@@ -75,6 +76,7 @@ export default function PhotoLarge({
   shouldShareYear,
   shouldShareCamera,
   shouldShareLens,
+  shouldShareAlbum,
   shouldShareTag,
   shouldShareFilm,
   shouldShareRecipe,
@@ -85,6 +87,7 @@ export default function PhotoLarge({
 }: {
   photo: Photo
   className?: string
+  album?: Album
   primaryTag?: string
   priority?: boolean
   prefetch?: boolean
@@ -105,6 +108,7 @@ export default function PhotoLarge({
   shouldShareYear?: boolean
   shouldShareCamera?: boolean
   shouldShareLens?: boolean
+  shouldShareAlbum?: boolean
   shouldShareTag?: boolean
   shouldShareFilm?: boolean
   shouldShareRecipe?: boolean
@@ -126,14 +130,6 @@ export default function PhotoLarge({
   } = useAppState();
 
   const appText = useAppText();
-
-  const {
-    cameraCount,
-    lensCount,
-    tagCounts,
-    recipeCount,
-    filmCount,
-  } = useCategoryCountsForPhoto(photo);
 
   const showZoomControls = _showZoomControls && areZoomControlsShown;
   const selectZoomImageElement = useCallback(
@@ -171,7 +167,7 @@ export default function PhotoLarge({
   const showRecipeContent = showRecipe && shouldShowRecipeDataForPhoto(photo);
   const showFilmContent = showFilm && shouldShowFilmDataForPhoto(photo);
 
-  useVisible({ ref, onVisible });
+  useVisibility({ ref, onVisible });
 
   const hasTitle =
     showTitle &&
@@ -332,14 +328,12 @@ export default function PhotoLarge({
                               camera={camera}
                               contrast="medium"
                               prefetch={prefetchRelatedLinks}
-                              countOnHover={cameraCount}
                             />}
                           {showLensContent &&
                             <PhotoLens
                               lens={lens}
                               contrast="medium"
                               prefetch={prefetchRelatedLinks}
-                              countOnHover={lensCount}
                             />}
                         </div>}
                       {showRecipeContent && recipeTitle &&
@@ -348,14 +342,12 @@ export default function PhotoLarge({
                           recipe={recipeTitle}
                           contrast="medium"
                           prefetch={prefetchRelatedLinks}
-                          countOnHover={recipeCount}
                           toggleRecipeOverlay={toggleRecipeOverlay}
                           isShowingRecipeOverlay={isShowingRecipeOverlay}
                         />}
                       {showTagsContent &&
                         <PhotoTags
                           tags={tags}
-                          tagCounts={tagCounts}
                           contrast="medium"
                           prefetch={prefetchRelatedLinks}
                         />}
@@ -415,7 +407,6 @@ export default function PhotoLarge({
                         ref={refPhotoFilm}
                         film={photo.film}
                         prefetch={prefetchRelatedLinks}
-                        countOnHover={filmCount}
                         {...photo.recipeData && !photo.recipeTitle && {
                           toggleRecipeOverlay,
                           isShowingRecipeOverlay,
@@ -461,6 +452,9 @@ export default function PhotoLarge({
                           : undefined}
                         year={shouldShareYear
                           ? year
+                          : undefined}
+                        album={shouldShareAlbum
+                          ? album
                           : undefined}
                         tag={shouldShareTag
                           ? primaryTag

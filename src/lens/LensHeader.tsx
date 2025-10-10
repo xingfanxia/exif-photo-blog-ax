@@ -1,9 +1,9 @@
-import { Photo, PhotoDateRange } from '@/photo';
+import { Photo, PhotoDateRangePostgres } from '@/photo';
 import PhotoHeader from '@/photo/PhotoHeader';
 import { Lens, lensFromPhoto } from '.';
 import PhotoLens from './PhotoLens';
 import { descriptionForLensPhotos } from './meta';
-import { AI_TEXT_GENERATION_ENABLED } from '@/app/config';
+import { AI_CONTENT_GENERATION_ENABLED } from '@/app/config';
 import { getAppText } from '@/i18n/state/server';
 
 export default async function LensHeader({
@@ -19,7 +19,7 @@ export default async function LensHeader({
   selectedPhoto?: Photo
   indexNumber?: number
   count?: number
-  dateRange?: PhotoDateRange
+  dateRange?: PhotoDateRangePostgres
 }) {
   const lens = lensFromPhoto(photos[0], lensProp);
   const appText = await getAppText();
@@ -30,7 +30,7 @@ export default async function LensHeader({
       entity={<PhotoLens
         {...{ lens }}
         contrast="high"
-        showHover={false}
+        hoverType="none"
         longText
       />}
       entityDescription={
@@ -46,7 +46,7 @@ export default async function LensHeader({
       indexNumber={indexNumber}
       count={count}
       dateRange={dateRange}
-      hasAiTextGeneration={AI_TEXT_GENERATION_ENABLED}
+      hasAiTextGeneration={AI_CONTENT_GENERATION_ENABLED}
       includeShareButton
     />
   );

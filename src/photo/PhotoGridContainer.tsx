@@ -19,7 +19,7 @@ export default function PhotoGridContainer({
   animateOnFirstLoadOnly,
   header,
   sidebar,
-  canSelect,
+  className,
   ...categories
 }: {
   cacheKey: string
@@ -29,12 +29,12 @@ export default function PhotoGridContainer({
   excludeFromFeeds?: boolean
   header?: ReactNode
   sidebar?: ReactNode
+  className?: string
 } & ComponentProps<typeof PhotoGrid>) {
   const [
     shouldAnimateDynamicItems,
     setShouldAnimateDynamicItems,
   ] = useState(false);
-
   const onAnimationComplete = useCallback(() =>
     setShouldAnimateDynamicItems(true), []);
 
@@ -42,6 +42,7 @@ export default function PhotoGridContainer({
     <AppGrid
       contentMain={<div className={clsx(
         header && 'space-y-8 mt-1.5',
+        className,
       )}>
         {header &&
           <AnimateItems
@@ -55,7 +56,6 @@ export default function PhotoGridContainer({
             ...categories,
             animateOnFirstLoadOnly,
             onAnimationComplete,
-            canSelect,
           }} />
           {count > photos.length &&
             <PhotoGridInfinite {...{
@@ -67,7 +67,6 @@ export default function PhotoGridContainer({
               ...categories,
               canStart: shouldAnimateDynamicItems,
               animateOnFirstLoadOnly,
-              canSelect,
             }} />}
         </div>
       </div>}
