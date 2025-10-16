@@ -15,7 +15,7 @@ const checkRateLimitAndThrow = (isBatch?: boolean) =>
     ...isBatch && { tokens: 1200, duration: '1d' },
   });
 
-const MODEL = 'o4-mini';
+const MODEL = 'gpt-5-mini';
 
 const openai = OPENAI_SECRET_KEY
   ? createOpenAI({
