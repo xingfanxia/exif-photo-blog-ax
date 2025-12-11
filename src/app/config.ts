@@ -11,6 +11,7 @@ import {
 import { getNavSortControlFromString, getSortByFromString } from '@/photo/sort';
 import { parseChromaCutoff, parseStartingHue } from '@/photo/color/sort';
 import { parseSocialKeysFromString } from '@/social';
+import { dependencies } from '../../package.json';
 
 // HARD-CODED GLOBAL CONFIGURATION
 
@@ -386,10 +387,13 @@ export const PAGE_SCRIPT_URLS = process.env.PAGE_SCRIPT_URLS
     .filter(url => url.startsWith('https://'))
   : [];
 
+// DEBUGGING
+
+export const DEBUG_OUTPUTS_ENABLED = process.env.DISABLE_DEBUG_OUTPUTS !== '1';
+
 // INTERNAL
 
 export const ADMIN_DEBUG_TOOLS_ENABLED = process.env.ADMIN_DEBUG_TOOLS === '1';
-export const ADMIN_DB_OPTIMIZE_ENABLED = process.env.ADMIN_DB_OPTIMIZE === '1';
 export const ADMIN_SQL_DEBUG_ENABLED =
   process.env.ADMIN_SQL_DEBUG === '1' &&
   !IS_BUILDING;
@@ -511,16 +515,17 @@ export const APP_CONFIGURATION = {
   // Scripts & Analytics
   hasPageScriptUrls: PAGE_SCRIPT_URLS.length > 0,
   pageScriptUrls: PAGE_SCRIPT_URLS,
+  // Debugging
+  isDebuggingEnabled: DEBUG_OUTPUTS_ENABLED,
   // Internal
   areInternalToolsEnabled: (
     ADMIN_DEBUG_TOOLS_ENABLED ||
-    ADMIN_DB_OPTIMIZE_ENABLED ||
     ADMIN_SQL_DEBUG_ENABLED
   ),
   areAdminDebugToolsEnabled: ADMIN_DEBUG_TOOLS_ENABLED,
-  isAdminDbOptimizeEnabled: ADMIN_DB_OPTIMIZE_ENABLED,
   isAdminSqlDebugEnabled: ADMIN_SQL_DEBUG_ENABLED,
   // Misc
+  nextVersion: dependencies.next,
   baseUrl: BASE_URL,
   baseUrlShare: BASE_URL_SHARE,
   commitSha: VERCEL_GIT_COMMIT_SHA_SHORT,

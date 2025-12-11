@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import {
@@ -64,6 +65,7 @@ import SmallDisclosure from '@/components/SmallDisclosure';
 import { TbPhoto } from 'react-icons/tb';
 import { Albums } from '@/album';
 import FieldsetAlbum from '@/album/FieldsetAlbum';
+import Form from 'next/form';
 
 const THUMBNAIL_SIZE = 300;
 
@@ -334,7 +336,7 @@ export default function PhotoForm({
         ? 'true'
         : 'false',
     }));
-  }, []);
+  }, [setFormData]);
 
   const formContent = useMemo(() =>
     FORM_METADATA_ENTRIES_BY_SECTION(
@@ -449,7 +451,7 @@ export default function PhotoForm({
           </a>
         ))}
       </div>
-      <form
+      <Form
         action={data => (type === 'create'
           ? createPhotoAction
           : updatePhotoAction
@@ -587,6 +589,12 @@ export default function PhotoForm({
                             colorData={generateColorDataFromString(formData.colorData)}
                           />}
                         />;
+                      case 'tags':
+                        return <FieldsetWithStatus
+                          key={key}
+                          {...fieldProps}
+                          className="relative z-2"
+                        />;
                       case 'albums':
                         return <FieldsetAlbum
                           key={key}
@@ -656,7 +664,7 @@ export default function PhotoForm({
             'dark:from-black/90 dark:from-50%',
           )} />
         </div>
-      </form>
+      </Form>
     </div>
   );
 };

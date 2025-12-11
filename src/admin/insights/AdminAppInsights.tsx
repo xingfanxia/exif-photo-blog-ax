@@ -10,7 +10,7 @@ import {
 } from '@/photo/query';
 import AdminAppInsightsClient from './AdminAppInsightsClient';
 import { getAllInsights, getGitHubMetaForCurrentApp } from '.';
-import { USED_DEPRECATED_ENV_VARS } from '@/app/config';
+import { APP_CONFIGURATION, USED_DEPRECATED_ENV_VARS } from '@/app/config';
 
 export default async function AdminAppInsights() {
   const [
@@ -42,6 +42,7 @@ export default async function AdminAppInsights() {
   return (
     <AdminAppInsightsClient
       codeMeta={codeMeta}
+      nextVersion={APP_CONFIGURATION.nextVersion}
       insights={getAllInsights({
         codeMeta,
         photosCount,

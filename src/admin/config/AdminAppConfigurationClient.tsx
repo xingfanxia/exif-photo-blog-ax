@@ -133,11 +133,14 @@ export default function AdminAppConfigurationClient({
   // Scripts & Analytics
   hasPageScriptUrls,
   pageScriptUrls,
+  // Debugging
+  isDebuggingEnabled,
   // Internal
   areInternalToolsEnabled,
   areAdminDebugToolsEnabled,
-  isAdminDbOptimizeEnabled,
   isAdminSqlDebugEnabled,
+  // Auth
+  secret,
   // Connection status
   databaseError,
   storageError,
@@ -148,6 +151,7 @@ export default function AdminAppConfigurationClient({
   simplifiedView,
   isAnalyzingConfiguration,
 }: AppConfiguration &
+  { secret: string } &
   Partial<Awaited<ReturnType<typeof testConnectionsAction>>> & {
     simplifiedView?: boolean
     isAnalyzingConfiguration?: boolean
@@ -374,7 +378,7 @@ export default function AdminAppConfigurationClient({
             Store auth secret in environment variable:
             {!hasAuthSecret &&
             <div className="overflow-x-auto">
-              <SecretGenerator />
+              <SecretGenerator {...{ secret }} />
             </div>}
             {renderEnvVars(['AUTH_SECRET'])}
           </ChecklistRow>
@@ -970,6 +974,18 @@ export default function AdminAppConfigurationClient({
             {renderEnvVars(['PAGE_SCRIPT_URLS'])}
           </ChecklistRow>
         </>;
+      case 'Debugging':
+        return <>
+          <ChecklistRow
+            title="Debug outputs"
+            status={isDebuggingEnabled}
+            optional
+          >
+            Set environment variable to {'"1"'} to disable build identifier
+            and admin configuration export:
+            {renderEnvVars(['DISABLE_DEBUG_OUTPUTS'])}
+          </ChecklistRow>
+        </>;
       case 'Internal':
         return <>
           <ChecklistRow
@@ -980,15 +996,6 @@ export default function AdminAppConfigurationClient({
             Set environment variable to {'"1"'} to temporarily enable
             features like photo matting, baseline grid, etc.:
             {renderEnvVars(['ADMIN_DEBUG_TOOLS'])}
-          </ChecklistRow>
-          <ChecklistRow
-            title="DB optimize"
-            status={isAdminDbOptimizeEnabled}
-            optional
-          >
-            Set environment variable to {'"1"'} to prevent
-            homepages from seeding infinite scroll on load:
-            {renderEnvVars(['ADMIN_DB_OPTIMIZE'])}
           </ChecklistRow>
           <ChecklistRow
             title="SQL debugging"
