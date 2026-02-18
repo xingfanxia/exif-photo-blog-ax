@@ -15,6 +15,7 @@ export const PATH_ADMIN                 = '/admin';
 export const PATH_API                   = '/api';
 export const PATH_SIGN_IN               = '/sign-in';
 export const PATH_OG                    = '/og';
+export const PATH_PROJECTS              = '/projects';
 
 // Core: inferred
 export const PATH_GRID_INFERRED = GRID_HOMEPAGE_ENABLED
