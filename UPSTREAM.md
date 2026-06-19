@@ -186,3 +186,9 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `src/platforms/openai.ts` | EDIT | `getVisionModel(model?)` factory (injected→OPENAI→gateway string); all query fns take optional `model?`; stale gpt-5.2 default + 'compatible' sentinel dropped (→gpt-4o). | Re-apply; superseded if renamed to ai.ts. |
 
 **Cosmetic follow-up:** rename openai.ts→ai.ts + 4 import sites (nominal). Model IDs are env-driven (set AI_MODEL against the live Gateway catalog).
+
+### PLOG-13 (CTE) — getPhotosNearId onto ParamBuilder (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/photo/query.ts` | EDIT | `getPhotosNearId` continues the wheres `$N` sequence via ParamBuilder (was a 2nd manual valuesIndex++). Binding-identical; live-validated to execute. | Re-apply. |

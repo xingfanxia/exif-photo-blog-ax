@@ -36,7 +36,7 @@ import {
 import { Recipes } from '@/recipe';
 import { Years } from '@/year';
 import { PhotoColorData } from '@/photo/color/client';
-import { safelyQuery } from '@/db/query';
+import { safelyQuery, ParamBuilder } from '@/db/query';
 
 export const createPhotosTable = () =>
   sql`
@@ -539,7 +539,11 @@ export const getPhotosNearId = async (
       lastValuesIndex,
     } = getWheresFromOptions(options);
 
-    let valuesIndex = lastValuesIndex;
+    // PLOG-13: continue the SAME $N sequence through one ParamBuilder instead
+    // of a second manual valuesIndex++ scheme alongside the wheres bindings.
+    const pb = new ParamBuilder(lastValuesIndex);
+    const idParam = pb.add(photoId);
+    const limitParam = pb.add(limit as number);
 
     return query(
       `
@@ -550,13 +554,13 @@ export const getPhotosNearId = async (
           ${joins ? `${joins}` : ''}
           ${wheres}
         ),
-        current AS (SELECT row_number FROM twi WHERE id = $${valuesIndex++})
+        current AS (SELECT row_number FROM twi WHERE id = ${idParam})
         SELECT twi.*
         FROM twi, current
         WHERE twi.row_number >= current.row_number - 1
-        LIMIT $${valuesIndex++}
+        LIMIT ${limitParam}
       `,
-      [...wheresValues, photoId, limit],
+      [...wheresValues, ...pb.values],
     )
       .then(({ rows }) => {
         const photo = rows.find(({ id }) => id === photoId);
