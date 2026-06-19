@@ -114,3 +114,11 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 |---|---|---|---|
 | `app/p/[photoId]/page.tsx` | EDIT | `export const revalidate = 3600` (ISR). | Re-apply. |
 | `src/photo/PhotoMedium.tsx` | EDIT | `prefetch` driven by `useVisibility` (in-viewport), not the global flag. | Re-apply. |
+
+### PLOG-11 — Typed photo DB→domain boundary (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/photo/index.ts` | EDIT | Added `PhotoRowSchema` (zod looseObject); `parsePhotoFromDb` validates via `.parse()` (loud throw) instead of the silently-unsound `as unknown as PhotoDb`. | Keep the schema; re-apply the parse in `parsePhotoFromDb`. |
+
+**Follow-ups (not yet done):** album parseAlbumFromDb zod, z.coerce.number() for COUNT(*) sites, drop `query<T=any>` default in postgres.ts. Kept PhotoDb as an interface (no z.infer derivation) to avoid destabilizing ~100 importers without live-row verification.

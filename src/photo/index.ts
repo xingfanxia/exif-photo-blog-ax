@@ -16,6 +16,7 @@ import {
 } from '@/utility/exif-format';
 import { capitalize, parameterize } from '@/utility/string';
 import camelcaseKeys from 'camelcase-keys';
+import { z } from 'zod';
 import { isBefore } from 'date-fns';
 import type { Metadata } from 'next';
 import { FujifilmRecipe } from '@/platforms/fujifilm/recipe';
@@ -104,6 +105,28 @@ export interface PhotoDb extends
   tags: string[] | null
 }
 
+// Runtime-validated DB→domain boundary (PLOG-11). Replaces the silently-
+// unsound `as unknown as PhotoDb` cast: a renamed/missing column or a malformed
+// JSONB value now throws a loud, field-named ZodError instead of yielding a
+// wrong object. Permissive by design (`looseObject` passes through unmodeled
+// columns) so it can't reject valid rows — it asserts only the invariants that
+// matter (required identity columns, tag-array shape, JSONB value shape).
+const jsonbField = z.union([
+  z.string(), // legacy escaped-JSON string
+  z.record(z.string(), z.unknown()), // pg-parsed JSONB object
+  z.array(z.unknown()), // pg-parsed JSONB array
+  z.null(),
+]).optional();
+
+export const PhotoRowSchema = z.looseObject({
+  id: z.string(),
+  url: z.string(),
+  extension: z.string(),
+  tags: z.array(z.string()).nullable().optional(),
+  recipeData: jsonbField,
+  colorData: jsonbField,
+});
+
 // Parsed db response
 export interface Photo extends Omit<PhotoDb, 'recipeData' | 'colorData'> {
   focalLengthFormatted?: string
@@ -120,8 +143,13 @@ export interface Photo extends Omit<PhotoDb, 'recipeData' | 'colorData'> {
 }
 
 export const parsePhotoFromDb = (photoDbRaw: PhotoDb): Photo => {
-  const photoDb = camelcaseKeys(
-    photoDbRaw as unknown as Record<string, unknown>,
+  // Validate at the boundary (throws loudly on a renamed column / malformed
+  // JSONB) instead of the old silently-unsound cast. The trailing cast is a
+  // pure TS bridge — `looseObject`'s inferred type carries an index signature
+  // rather than PhotoDb's exact optionals — NOT a soundness escape: the shape
+  // has already been checked by `.parse()`.
+  const photoDb = PhotoRowSchema.parse(
+    camelcaseKeys(photoDbRaw as unknown as Record<string, unknown>),
   ) as unknown as PhotoDb;
   return {
     ...photoDb,
