@@ -34,12 +34,23 @@ export const generateAiImageQueries = async ({
         existingTitle,
         uniqueTags,
       );
-      return generateOpenAiImageObjectQuery(
+      // The object query now returns tags as a normalized string[] (PLOG-9);
+      // re-join to the CSV string this function's callers expect.
+      const { tags, ...rest } = await generateOpenAiImageObjectQuery(
         imageBase64,
         query,
         schema,
         isBatch,
-      );
+      ) as {
+        title?: string
+        caption?: string
+        tags?: string[]
+        semantic?: string
+      };
+      return {
+        ...rest,
+        ...(tags && { tags: tags.join(', ') }),
+      };
     } catch (e: any) {
       return {
         error: e.message,

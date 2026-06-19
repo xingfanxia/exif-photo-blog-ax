@@ -5,6 +5,11 @@ import { OPENAI_BASE_URL, OPENAI_MODEL, OPENAI_SECRET_KEY } from '@/app/config';
 import { removeBase64Prefix } from '@/utility/image';
 import { cleanUpAiTextResponse } from '@/photo/ai';
 import {
+  normalizeAiResult,
+  AiResultRaw,
+} from '@/photo/ai/normalizeAiResult';
+import { AI_TAGS_MIN, AI_TAGS_MAX } from '@/photo/ai/prompts';
+import {
   checkRateLimitAndThrow as _checkRateLimitAndThrow,
 } from '@/platforms/rate-limit';
 import { z } from 'zod';
@@ -99,28 +104,39 @@ export const generateOpenAiImageObjectQuery = async <T extends z.ZodSchema>(
 ): Promise<z.infer<T>> => {
   await checkRateLimitAndThrow(isBatch);
 
-  if (openai) {
-    return generateText({
-      model: openai(MODEL),
+  if (!openai) {
+    throw new Error('No OpenAI client');
+  }
+  const client = openai;
+
+  const run = async (q: string): Promise<z.infer<T>> => {
+    const { output } = await generateText({
+      model: client(MODEL),
       output: Output.object({ schema }),
       messages: [{
         'role': 'user',
         'content': [
-          {
-            'type': 'text',
-            'text': query,
-          }, {
-            'type': 'image',
-            'image': removeBase64Prefix(imageBase64),
-          },
+          { 'type': 'text', 'text': q },
+          { 'type': 'image', 'image': removeBase64Prefix(imageBase64) },
         ],
       }],
-    }).then(result => Object.fromEntries(Object
-      .entries(result.output || {})
-      .map(([k, v]) => [k, cleanUpAiTextResponse(v as string)]),
-    ) as z.infer<T>);
-  } else {
-    throw new Error('No OpenAI client');
+    });
+    // PLOG-9: code-enforced post-processing, THEN re-validate against the
+    // schema. The old `as z.infer<T>` re-cast bypassed validation entirely.
+    return schema.parse(
+      normalizeAiResult((output ?? {}) as AiResultRaw),
+    ) as z.infer<T>;
+  };
+
+  try {
+    return await run(query);
+  } catch {
+    // One tolerant retry with a stricter instruction on parse/shape failure.
+    return run(
+      `${query}\n\nRespond ONLY with valid JSON matching the schema. ` +
+      `"tags" must be an array of ${AI_TAGS_MIN}-${AI_TAGS_MAX} specific, ` +
+      'non-generic keywords.',
+    );
   }
 };
 

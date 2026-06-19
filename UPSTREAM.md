@@ -122,3 +122,14 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `src/photo/index.ts` | EDIT | Added `PhotoRowSchema` (zod looseObject); `parsePhotoFromDb` validates via `.parse()` (loud throw) instead of the silently-unsound `as unknown as PhotoDb`. | Keep the schema; re-apply the parse in `parsePhotoFromDb`. |
 
 **Follow-ups (not yet done):** album parseAlbumFromDb zod, z.coerce.number() for COUNT(*) sites, drop `query<T=any>` default in postgres.ts. Kept PhotoDb as an interface (no z.infer derivation) to avoid destabilizing ~100 importers without live-row verification.
+
+### PLOG-9 (core) — AI typed schema + normalizeAiResult (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/photo/ai/prompts.ts` + `src/photo/ai/normalizeAiResult.ts` + `__tests__/ai-generate.test.ts` | NEW | Deny-list + pure tag/text invariants + tests. | None (additive). |
+| `src/photo/ai/index.ts` | EDIT | `tags` schema → `z.array().min(4).max(10)`; length caps on text fields. | Re-apply. |
+| `src/platforms/openai.ts` | EDIT | `generateOpenAiImageObjectQuery`: `schema.parse(normalizeAiResult(output))` + 1 tolerant retry (was an unsound `as z.infer<T>` recast). | Re-apply; superseded by `ai.ts` in Part 2. |
+| `src/photo/ai/server.ts` | EDIT | Re-join the now-array tags → CSV for existing callers. | Re-apply. |
+
+**PLOG-9 Part 2 (NOT done):** provider-agnostic `src/platforms/ai.ts` (Gateway + injectable model), rename 4 import sites, AI gate vars in `config-fork.ts`. Gated on setting AI Gateway model IDs in env against the LIVE catalog (never hardcode).
