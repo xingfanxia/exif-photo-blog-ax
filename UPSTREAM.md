@@ -82,6 +82,14 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `src/photo/ai/useAiImageQuery.ts` | EDIT | First param now a lazy `getImageBase64` thunk; loud error on empty. | Re-apply. |
 | `src/photo/ai/useTitleCaptionAiImageQuery.ts` | EDIT | Thread the lazy thunk. | Re-apply. |
 
+### PLOG-8 — pg.Pool tuning + Supabase SSL fix (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/platforms/postgres.ts` | EDIT | `ssl: true` → `ssl: { rejectUnauthorized: false }` (Supabase pooler cert chain fails default verification; TLS still encrypts). Added `max: 3` + `idleTimeoutMillis`/`connectionTimeoutMillis: 10s` for the transaction pooler. Fixed `SELECt`→`SELECT` typo. | Keep the SSL relaxation + pool caps on merge. |
+
+**Security note:** `rejectUnauthorized: false` skips TLS cert-chain verification (still encrypted). Empirically required for this Supabase pooler. Hardening option if desired: ship Supabase's CA cert and use `ssl: { ca, rejectUnauthorized: true }`.
+
 ---
 
 > Maintained per the overhaul plan (`docs/overhaul/07-IMPLEMENTATION-PLAN.md`).
