@@ -129,7 +129,7 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 |---|---|---|---|
 | `src/photo/ai/prompts.ts` + `src/photo/ai/normalizeAiResult.ts` + `__tests__/ai-generate.test.ts` | NEW | Deny-list + pure tag/text invariants + tests. | None (additive). |
 | `src/photo/ai/index.ts` | EDIT | `tags` schema → `z.array().min(4).max(10)`; length caps on text fields. | Re-apply. |
-| `src/platforms/openai.ts` | EDIT | `generateOpenAiImageObjectQuery`: `schema.parse(normalizeAiResult(output))` + 1 tolerant retry (was an unsound `as z.infer<T>` recast). | Re-apply; superseded by `ai.ts` in Part 2. |
+| `src/platforms/ai.ts` (was openai.ts) | EDIT/RENAME | `generateOpenAiImageObjectQuery`: `schema.parse(normalizeAiResult(output))` + 1 tolerant retry (was an unsound `as z.infer<T>` recast). | Re-apply; superseded by `ai.ts` in Part 2. |
 | `src/photo/ai/server.ts` | EDIT | Re-join the now-array tags → CSV for existing callers. | Re-apply. |
 
 **PLOG-9 Part 2 (NOT done):** provider-agnostic `src/platforms/ai.ts` (Gateway + injectable model), rename 4 import sites, AI gate vars in `config-fork.ts`. Gated on setting AI Gateway model IDs in env against the LIVE catalog (never hardcode).
