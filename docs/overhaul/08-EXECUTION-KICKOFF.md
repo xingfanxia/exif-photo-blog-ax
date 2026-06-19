@@ -28,8 +28,9 @@ LOCKED DECISIONS (do NOT re-litigate — they are settled in 02/06):
   edit-page code waste + possible Supabase free-tier auto-pause + an untuned pool + a
   REGION MISMATCH — all fixed within this stack (PLOG-3/4/5/8), never by swapping engines.
 - REGION (2026-06-19): the DB is now AWS Tokyo `ap-northeast-1` (Supabase project
-  `mhivudssocofqzujqbxa`). In PLOG-8, SET the Vercel function region to `hnd1` (Tokyo) to
-  co-locate; the default `iad1` is a trans-Pacific hop on every dynamic/admin/build query.
+  `mhivudssocofqzujqbxa`). vercel.json already pins `regions:["hnd1"]` (Tokyo) to
+  co-locate — the default `iad1` would be a trans-Pacific hop. In PLOG-8 just CONFIRM
+  functions run in hnd1 in the dashboard after deploy + Supabase is on a non-pausing tier.
 - Fix the fork; do NOT rewrite the app. AI is the ONE scoped module rewrite (PLOG-9).
 - Keep raw `pg` (no ORM); keep the four-backend storage adapter and the per-domain
   sibling taxonomy layout as-is.
