@@ -13,8 +13,8 @@ Priority-ordered causes:
 **Fix order:** (1) co-locate fn region w/ DB region; (2) pooled string everywhere except migrations; (3) Fluid Compute ON (warm fns reuse connections); (4) optionally Neon HTTP driver. No SQL rewrite, no engine change.
 
 ### ⚠️ Cross-check vs THIS deployment (from `.env.local` + repo)
-- DB = Supabase **us-east-1**, **pooled string :6543 already in use** ✅ (cause #2 already handled).
-- **No `vercel.json`/`vercel.ts` → function region = Vercel default `iad1` (us-east-1) ⇒ likely already co-located** ✅. **ACTION: verify the project's region in the Vercel dashboard == `iad1`/us-east-1** (region can be set in dashboard, not just code).
+- DB = Supabase, **pooled string :6543 already in use** ✅ (cause #2 handled). ⚠️ **Region (2026-06-19): DB recreated in `ap-northeast-1` (Tokyo)** — was us-east-1.
+- **No `vercel.json`/`vercel.ts` → function region = Vercel default `iad1` (US-East)** ⇒ now a **trans-Pacific mismatch** with the Tokyo DB (cause #3 is LIVE, not ruled out). **ACTION: set the Vercel function region to `hnd1` (Tokyo)** via `vercel.json`/`vercel.ts` `regions:['hnd1']` or the dashboard.
 - **OPEN RISK — Supabase auto-pause:** free tier pauses after 7 days idle; first request after pause is very slow / errors. A direct connection attempt during this research returned `tenant/user … not found` (consistent with a paused/unreachable project OR sandbox network block). **If the blog is low-traffic on Supabase free tier, the 7-day pause + cold resume is a prime "卡" cause.** ACTION: confirm Supabase tier is non-pausing, or move to Neon (scale-to-zero but stays reachable, faster cold).
 - App uses raw node-pg unnamed/parameterized queries → transaction-pooler prepared-statement caveat likely already satisfied.
 
@@ -56,6 +56,6 @@ Priority-ordered causes:
 - **Cloudflare Image Resizing**: 5K/mo free then $0.50/1K; delivery $1/100K.
 
 ## TL;DR
-- **A:** Don't migrate off PG. Verify region co-location (likely already iad1↔us-east-1), keep pooled string, Fluid Compute on, fix Supabase pause/tier. Optionally Neon HTTP driver.
+- **A:** Don't migrate off PG. **Set Vercel region to `hnd1` to co-locate with the new Tokyo `ap-northeast-1` DB** (was assumed co-located; now a real mismatch), keep pooled string, Fluid Compute on, fix Supabase pause/tier. Optionally Neon HTTP driver.
 - **B:** Keep Postgres (stay Supabase or move to Neon). Redis = cache only. Turso = no.
 - **C:** Serve images from R2 via Cloudflare with a **custom Next image loader (absolute URL)** or `unoptimized` — **turn OFF Vercel Image Optimization for R2 sources.** ~$16–55→~$1–3/mo at 100 GB. Files: `next.config.ts` + new `imageLoader.ts`.

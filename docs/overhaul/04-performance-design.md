@@ -5,7 +5,7 @@
 ## §0 Reframing the problem (from direct evidence)
 The user's mental model ("Postgres slow → maybe rewrite in a more performant architecture") is **partly mis-targeted**, and the evidence changes the plan:
 - **Static optimization is ON** → public pages are pre-rendered; visitors don't hit Postgres per request. So a from-scratch rewrite for "fast pages" buys little — the pages are already static.
-- **DB and functions are co-located** (Supabase us-east-1 ↔ Vercel iad1) → "Postgres slow" is **not** latency/region. It's **build-time fan-out**, **dynamic/admin/search paths**, and **Supabase tier compute**.
+- **DB region (updated 2026-06-19): now Tokyo `ap-northeast-1`** while Vercel defaults to `iad1` → a **trans-Pacific mismatch** until the Vercel region is set to `hnd1`. (Originally co-located us-east-1↔iad1, which is why region was first ruled out.) Beyond region, "Postgres slow" is **build-time fan-out**, **dynamic/admin/search paths**, and **Supabase tier compute**.
 - Therefore the "卡" (jank) is almost certainly **client-side + image delivery**, not server rendering.
 
 → **A greenfield rewrite is not justified.** The performant architecture the user wants is mostly reachable by *tuning the existing one*. (Final call in `00-RECOMMENDATION.md`.)

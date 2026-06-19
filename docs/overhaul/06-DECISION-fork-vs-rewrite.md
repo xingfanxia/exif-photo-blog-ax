@@ -56,7 +56,7 @@ Reachable % of ideal: hybrid **97%** · fork-refactor 90% · rewrite **75%**.
 ## When a DIFFERENT path wins (the genuinely owner-only call)
 - **Clean-rewrite wins ONLY IF** you make an explicit, irreversible decision to **abandon upstream** — i.e. firm, heavy, upstream-incompatible product direction that will diverge past the conflict-free threshold anyway. (Timing kernel: a future rewrite gets strictly more expensive as AX code accretes — but that only fires once divergence is a *committed plan*.) OR if your real frustration is *"I want a codebase that's mine,"* a **values** question, not an engineering one.
 - **Minimal slice wins IF** you want pain relief now and are indifferent to the legibility ceiling: ~2 weeks = edit-page fix + Cloudflare image loader + 3 indexes + AI swap; defer all structure-only seams.
-- **DB-engine swap (Redis/Turso) is rejected under ALL paths** (Redis can't serve the relational queries; Turso = full SQL-builder rewrite for latency a co-located app doesn't need).
+- **DB-engine swap (Redis/Turso) is rejected under ALL paths** (Redis can't serve the relational queries; Turso = full SQL-builder rewrite for edge latency a region-co-located app doesn't need — set Vercel region to `hnd1` to co-locate with the new Tokyo `ap-northeast-1` DB).
 
 ## Strangler sequence (each step = independent PR(s), main stays green + pull-able, ships its own oracle)
 - **STEP 0 — Conventions + upstream contract** (S, pure-new files): `docs/ARCHITECTURE.md` (load-bearing invariants) + `docs/UPSTREAM.md` (divergent-file registry) + headless `test`/`typecheck` scripts + **a CI workflow (none exists today)**. Oracle: CI green on a no-op PR.

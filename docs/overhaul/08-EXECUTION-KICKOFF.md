@@ -23,10 +23,13 @@ LOCKED DECISIONS (do NOT re-litigate — they are settled in 02/06):
 - Storage/DB stays Postgres on Supabase. Do NOT switch the data layer to Upstash Redis
   (a KV store — it physically cannot run the app's relational SQL: ANY(tags), ILIKE,
   EXTRACT, INTERVAL, JOINs, GROUP BY) or Turso/SQLite (would force rewriting the entire
-  Postgres-dialect query layer for edge latency a co-located iad1↔us-east-1 app does not
-  need). Redis stays cache/rate-limit ONLY. "Postgres feels slow" is missing indexes +
-  the edit-page code waste + possible Supabase free-tier auto-pause + an untuned pool —
-  all fixed within this stack (PLOG-3/4/5/8), never by swapping engines.
+  Postgres-dialect query layer for edge latency a region-co-located app does not need).
+  Redis stays cache/rate-limit ONLY. "Postgres feels slow" is missing indexes + the
+  edit-page code waste + possible Supabase free-tier auto-pause + an untuned pool + a
+  REGION MISMATCH — all fixed within this stack (PLOG-3/4/5/8), never by swapping engines.
+- REGION (2026-06-19): the DB is now AWS Tokyo `ap-northeast-1` (Supabase project
+  `mhivudssocofqzujqbxa`). In PLOG-8, SET the Vercel function region to `hnd1` (Tokyo) to
+  co-locate; the default `iad1` is a trans-Pacific hop on every dynamic/admin/build query.
 - Fix the fork; do NOT rewrite the app. AI is the ONE scoped module rewrite (PLOG-9).
 - Keep raw `pg` (no ORM); keep the four-backend storage adapter and the per-domain
   sibling taxonomy layout as-is.

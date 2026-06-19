@@ -18,13 +18,13 @@
 |---|---|---|
 | `NEXT_PUBLIC_STATICALLY_OPTIMIZE_PHOTOS` | `1` | **Static optimization is ON.** Public browsing pages are pre-rendered. Jank is NOT dynamic-SSR-per-request on public pages. |
 | `NEXT_PUBLIC_STATICALLY_OPTIMIZE_PHOTO_CATEGORIES` | `1` | Category pages pre-rendered too. |
-| `POSTGRES_URL` | `...pooler.supabase.com:6543...` | **Supabase Postgres, us-east-1, transaction pooler (Supavisor :6543).** Pooled string already in use. |
+| `POSTGRES_URL` | `...pooler.supabase.com:6543...` | **Supabase Postgres, transaction pooler (Supavisor :6543), pooled string in use.** ⚠️ DB recreated 2026-06-19 → now `ap-northeast-1` (Tokyo), project `mhivudssocofqzujqbxa` (was us-east-1). |
 | `NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_DOMAIN` | `photos.xiax.xyz` | **R2 already live**, served via Cloudflare custom domain → origin egress already free. |
 | `BLOB_READ_WRITE_TOKEN` | set | Vercel Blob token still present → dual config / mid-migration. |
-| (no `vercel.json`/`vercel.ts`) | — | **Function region = Vercel default `iad1` (us-east-1)** = co-located with the DB → DB↔fn latency minimal. |
+| (no `vercel.json`/`vercel.ts`) | — | Function region = Vercel default `iad1` (US-East). ⚠️ With the DB now in Tokyo `ap-northeast-1`, this is a **trans-Pacific mismatch** → SET region to `hnd1` (Tokyo). |
 
 ### Consequence for the user's three asks
-- **"Postgres feels slow"** — it is NOT cross-region (co-located iad1↔us-east-1) and NOT SSR-on-every-public-page (static is on). Real Postgres cost is concentrated in: (a) **build time** — `generateStaticParams` fans out a query per photo/category for the whole library; (b) **dynamic/admin/search paths** (ILIKE search, admin dashboards); (c) **Supabase compute tier** (free/small tier pauses + limited CPU). See `02-db-egress-research.md`.
+- **"Postgres feels slow"** — ⚠️ UPDATE 2026-06-19: the DB moved to Tokyo `ap-northeast-1` while Vercel defaults to `iad1`, so it IS now cross-region until the Vercel region is set to `hnd1`. (Originally co-located us-east-1↔iad1.) It is NOT SSR-on-every-public-page (static is on). Real Postgres cost is concentrated in: (a) **build time** — `generateStaticParams` fans out a query per photo/category for the whole library; (b) **dynamic/admin/search paths** (ILIKE search, admin dashboards); (c) **Supabase compute tier** (free/small tier pauses + limited CPU). See `02-db-egress-research.md`.
 - **"Site is laggy (卡)"** — with static pages, prime suspects shift to **client JS weight** (openlayers/framer-motion/viewerjs/color libs), **image payload/optimization latency**, **view-transition/animation jank**, and **build/revalidation lag** after edits. Awaiting `PerfAudit` agent quantification.
 - **Egress** — already mostly mitigated at the R2 origin. The remaining Vercel egress is the **Image Optimization layer**: `next.config.ts remotePatterns` includes the R2 host, so `<Image>` routes R2 images through Vercel `/_next/image` (Vercel bandwidth + transform cost). See `02-*`.
 
