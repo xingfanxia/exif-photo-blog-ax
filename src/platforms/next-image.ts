@@ -4,9 +4,11 @@ import {
   VERCEL_BYPASS_KEY,
   VERCEL_BYPASS_SECRET,
 } from '@/app/config';
+import { ImageVariantSize } from '@/photo/imageLoader';
 
-// Explicity defined next.config.js `imageSizes`
-type NextCustomSize = 200;
+// Custom `imageSizes` — sourced from the shared PLOG-6 variant module so this
+// type can't silently desync from next.config / the loader (was a bare `200`).
+type NextCustomSize = ImageVariantSize;
 
 type NextImageDeviceSize = 640 | 750 | 828 | 1080 | 1200 | 1920 | 2048 | 3840;
 

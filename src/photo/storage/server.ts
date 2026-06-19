@@ -20,9 +20,14 @@ export const storeOptimizedPhotosForUrl = async (
     : await fetch(url).then(res => res.arrayBuffer());
   const { fileNameBase } = getFileNamePartsFromStorageUrl(url);
   const optimizedPhotoFileMeta = getOptimizedPhotoFileMeta(fileNameBase);
-  for (const { fileName, size, quality } of optimizedPhotoFileMeta) {
-    await putFile(await resizeImageToBytes(fileBytes, size, quality), fileName);
-  }
+  // Generate + upload the sm/md/lg variants in parallel (PLOG-6) — they're
+  // independent, so the serial await-in-for needlessly serialized 3 sharp
+  // passes + uploads on every photo store.
+  await Promise.all(
+    optimizedPhotoFileMeta.map(async ({ fileName, size, quality }) =>
+      putFile(await resizeImageToBytes(fileBytes, size, quality), fileName),
+    ),
+  );
   return url;
 };
 

@@ -18,7 +18,9 @@ export const generateFeedMedia = (
   photo: Photo,
   size: NextImageSize,
 ): FeedMedia => ({
-  url: getOptimizedPhotoUrl({ imageUrl: photo.url, size }),
+  // PLOG-6: serve the direct R2 variant in feeds (RSS/JSON), not a
+  // /_next/image URL that external readers can't optimize.
+  url: getOptimizedPhotoUrl({ imageUrl: photo.url, size, useNextImage: false }),
   width: size,
   height: Math.round(size / photo.aspectRatio),
 });

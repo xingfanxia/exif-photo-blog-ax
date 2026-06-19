@@ -94,3 +94,16 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 
 > Maintained per the overhaul plan (`docs/overhaul/07-IMPLEMENTATION-PLAN.md`).
 > Conventions and the upstream-sync procedure live in `CLAUDE.md`.
+
+### PLOG-6 — R2 image loader + variants (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/photo/imageLoader.ts` + `__tests__/imageLoader.test.ts` | NEW | Pure custom Next image loader (width→R2 variant, passthrough); shared variant table. | None (additive). |
+| `next.config.ts` | EDIT | `images.loader:'custom'` + `loaderFile` + `imageSizes` from the shared module. | Keep the loader wiring on merge. |
+| `src/platforms/next-image.ts` | EDIT | `NextCustomSize` derived from the shared variant module (was bare `200`). | Re-apply. |
+| `src/feed/programmatic.ts` | EDIT | Feeds serve the direct R2 variant (`useNextImage:false`). | Re-apply. |
+| `src/photo/storage/index.ts` | EDIT | Exported `OPTIMIZED_FILE_SIZES` (loader desync ref). | Keep export. |
+| `src/platforms/storage/cloudflare-r2.ts` | EDIT | `cloudflareR2Delete` → `return await` (loud failures). | Re-apply. |
+| `src/photo/storage/server.ts` | EDIT | Parallelized the sm/md/lg variant writes (`Promise.all`). | Re-apply. |
+| `src/components/image/ImageMedium.tsx` | EDIT | Responsive card `sizes` default. | Re-apply. |
