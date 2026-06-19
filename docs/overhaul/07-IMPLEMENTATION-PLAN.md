@@ -119,7 +119,9 @@ Sequencing rule: **pain × (1/risk)**. Three phases — Foundations (honest gate
 - `__tests__/photo.test.ts`: valid row, null-tags, legacy string `recipeData`, malformed `colorData` (must throw loudly).
 - **Oracle:** new parse tests green incl. the malformed-throw; a renamed-column fixture throws a field-named error (not a silent wrong object); grep → no `as unknown as PhotoDb`.
 
-### PLOG-12 — `config-fork.ts` expansion + input-boundary zod validation `[deps: PLOG-9, PLOG-11]`
+### 🟡 PLOG-12 — config-fork expansion + input-boundary zod validation `[deps: PLOG-9,11]` — presigned-URL validation DONE; rest follow-up
+> Code oracle met: `app/api/storage/presigned-url/[key]/route.ts` now validates `key` via `StorageKeySchema` (`src/platforms/storage/key.ts`, pure) before signing a PUT — rejects path-traversal (`..`) + unsafe chars + over-length (admin-gated but previously unconstrained → overwrite/traversal risk). `__tests__/storage-key.test.ts` (3). `npx jest --ci` → 21 suites / 73; build exit 0.
+> **Follow-ups (not done):** `config-fork.ts` expansion (PHOTO_ID_FORWARDING_TABLE, ADMIN_EMAIL/PASSWORD, NEXT_PUBLIC_VERCEL_ENV, IMAGE_QUALITY reconcile); `photoFormSchema` with `z.coerce.number()` (kills NaN-unsafe parseInt + `(photoForm as any)` escapes in convertFormDataToPhotoDbInsert); `.env.example`; NEXT_PUBLIC_SITE_TITLE→META_TITLE migration.
 - Expand `config-fork.ts` (scaffolded in PLOG-2): surface `PHOTO_ID_FORWARDING_TABLE` (today a hidden `JSON.parse(process.env...)` at `photo/index.ts:219`), and **also the other flagged config leaks**: `ADMIN_EMAIL`/`ADMIN_PASSWORD` (`auth/server.ts:15-16`) and the re-derived `NEXT_PUBLIC_VERCEL_ENV` (`image-response/cache.ts:2`); reconcile the duplicated `IMAGE_QUALITY` logic (`next.config.ts:72` vs `config.ts:263`).
 - `src/photo/form/index.ts:392-478`: `photoFormSchema` (`z.coerce.number()` for numeric EXIF fields — kills the NaN-unsafe `parseInt/parseFloat` + the `(photoForm as any)[key]` escapes); parse inside `convertFormDataToPhotoDbInsert`; actions surface structured validation errors.
 - `app/api/storage/presigned-url/[key]/route.ts`: validate/sanitize `key` (zod) before signing.

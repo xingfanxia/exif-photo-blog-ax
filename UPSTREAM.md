@@ -133,3 +133,12 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `src/photo/ai/server.ts` | EDIT | Re-join the now-array tags → CSV for existing callers. | Re-apply. |
 
 **PLOG-9 Part 2 (NOT done):** provider-agnostic `src/platforms/ai.ts` (Gateway + injectable model), rename 4 import sites, AI gate vars in `config-fork.ts`. Gated on setting AI Gateway model IDs in env against the LIVE catalog (never hardcode).
+
+### PLOG-12 (partial) — presigned-URL key validation (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/platforms/storage/key.ts` + `__tests__/storage-key.test.ts` | NEW | Pure `StorageKeySchema` (safe chars, no `..`, bounded). | None (additive). |
+| `app/api/storage/presigned-url/[key]/route.ts` | EDIT | Validate `key` before signing a PUT (path-traversal/overwrite defense). | Re-apply. |
+
+**PLOG-12 follow-ups (NOT done):** config-fork expansion (config leaks), photoFormSchema z.coerce.number(), .env.example, SITE_TITLE→META_TITLE.
