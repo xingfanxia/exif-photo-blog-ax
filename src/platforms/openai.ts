@@ -1,6 +1,7 @@
-import { generateText, Output, streamText } from 'ai';
+import { generateText, Output, streamText, LanguageModel } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { OPENAI_BASE_URL, OPENAI_MODEL, OPENAI_SECRET_KEY } from '@/app/config';
+import { AI_MODEL, AI_GATEWAY_API_KEY } from '@/app/config-fork';
 import { removeBase64Prefix } from '@/utility/image';
 import { cleanUpAiTextResponse } from '@/photo/ai';
 import {
@@ -15,12 +16,10 @@ import { z } from 'zod';
 
 type OpenAIModel = Parameters<NonNullable<typeof openai>>[0];
 
-const MODEL_DEFAULT: OpenAIModel = 'gpt-5.2';
-const MODEL_COMPATIBLE: OpenAIModel = 'gpt-4o';
-
-const MODEL: OpenAIModel = OPENAI_MODEL === 'compatible'
-  ? MODEL_COMPATIBLE
-  : (OPENAI_MODEL || MODEL_DEFAULT);
+// Default OpenAI model for the direct-key escape hatch (was the stale
+// 'gpt-5.2'; the OPENAI_MODEL='compatible' sentinel is dropped — PLOG-9).
+const MODEL_DEFAULT: OpenAIModel = 'gpt-4o';
+const MODEL: OpenAIModel = OPENAI_MODEL || MODEL_DEFAULT;
 
 const checkRateLimitAndThrow = (isBatch?: boolean) =>
   _checkRateLimitAndThrow({
@@ -35,14 +34,31 @@ const openai = OPENAI_SECRET_KEY
   })
   : undefined;
 
+// Provider-agnostic vision model resolver (PLOG-9 Part 2). Priority:
+//   injected model (test seam / explicit) → OpenAI key (escape hatch) →
+//   AI Gateway model string (AI_MODEL, resolved by the AI SDK gateway).
+// A string return is a valid `LanguageModel` in AI SDK v6 (GlobalProviderModelId
+// → GatewayModelId). Tests inject a MockLanguageModelV2 to run offline.
+export const getVisionModel = (
+  model?: LanguageModel,
+): LanguageModel | undefined => {
+  if (model) { return model; }
+  if (openai) { return openai(MODEL); }
+  if (AI_GATEWAY_API_KEY) { return AI_MODEL; }
+  return undefined;
+};
+
 const getImageTextArgs = (
   imageBase64: string,
   query: string,
+  model?: LanguageModel,
 ): (
   Parameters<typeof streamText>[0] &
   Parameters<typeof generateText>[0]
-) | undefined => openai ? {
-  model: openai(MODEL),
+) | undefined => {
+  const visionModel = getVisionModel(model);
+  return visionModel ? {
+  model: visionModel,
   messages: [{
     'role': 'user',
     'content': [
@@ -55,11 +71,13 @@ const getImageTextArgs = (
       },
     ],
   }],
-} : undefined;
+  } : undefined;
+};
 
 export const streamOpenAiImageQuery = async (
   imageBase64: string,
   query: string,
+  model?: LanguageModel,
 ) => {
   await checkRateLimitAndThrow();
 
@@ -69,7 +87,7 @@ export const streamOpenAiImageQuery = async (
   const { createStreamableValue } = await import('@ai-sdk/rsc');
   const stream = createStreamableValue('');
 
-  const args = getImageTextArgs(imageBase64, query);
+  const args = getImageTextArgs(imageBase64, query, model);
 
   if (args) {
     (async () => {
@@ -88,10 +106,11 @@ export const generateOpenAiImageQuery = async (
   imageBase64: string,
   query: string,
   isBatch?: boolean,
+  model?: LanguageModel,
 ) => {
   await checkRateLimitAndThrow(isBatch);
 
-  const args = getImageTextArgs(imageBase64, query);
+  const args = getImageTextArgs(imageBase64, query, model);
 
   if (args) {
     return generateText(args)
@@ -104,17 +123,18 @@ export const generateOpenAiImageObjectQuery = async <T extends z.ZodSchema>(
   query: string,
   schema: T,
   isBatch?: boolean,
+  model?: LanguageModel,
 ): Promise<z.infer<T>> => {
   await checkRateLimitAndThrow(isBatch);
 
-  if (!openai) {
-    throw new Error('No OpenAI client');
+  const visionModel = getVisionModel(model);
+  if (!visionModel) {
+    throw new Error('No AI vision model (set OPENAI_SECRET_KEY or AI_GATEWAY_API_KEY)');
   }
-  const client = openai;
 
   const run = async (q: string): Promise<z.infer<T>> => {
     const { output } = await generateText({
-      model: client(MODEL),
+      model: visionModel,
       output: Output.object({ schema }),
       messages: [{
         'role': 'user',
@@ -143,12 +163,13 @@ export const generateOpenAiImageObjectQuery = async <T extends z.ZodSchema>(
   }
 };
 
-export const testOpenAiConnection = async () => {
+export const testOpenAiConnection = async (model?: LanguageModel) => {
   await checkRateLimitAndThrow();
 
-  if (openai) {
+  const visionModel = getVisionModel(model);
+  if (visionModel) {
     return generateText({
-      model: openai(MODEL),
+      model: visionModel,
       messages: [{
         'role': 'user',
         'content': [

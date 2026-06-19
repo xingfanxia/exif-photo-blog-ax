@@ -177,3 +177,12 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 |---|---|---|---|
 | `src/photo/form/index.ts` | EDIT | `parseFormNumber`/`parseFormInt` (`z.coerce.number().finite()`) replace NaN-unsafe parseInt/parseFloat in convertFormDataToPhotoDbInsert. | Re-apply. |
 | `__tests__/photo-form.test.ts` | NEW | NaN-safety tests. | None (additive). |
+
+### PLOG-9 Part 2 — provider-agnostic AI factory (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/app/config-fork.ts` | EDIT | AI_MODEL/AI_MODEL_FALLBACK/AI_GATEWAY_API_KEY + AI_CONTENT_GENERATION_ENABLED_FORK (gateway-aware). | Keep. |
+| `src/platforms/openai.ts` | EDIT | `getVisionModel(model?)` factory (injected→OPENAI→gateway string); all query fns take optional `model?`; stale gpt-5.2 default + 'compatible' sentinel dropped (→gpt-4o). | Re-apply; superseded if renamed to ai.ts. |
+
+**Cosmetic follow-up:** rename openai.ts→ai.ts + 4 import sites (nominal). Model IDs are env-driven (set AI_MODEL against the live Gateway catalog).

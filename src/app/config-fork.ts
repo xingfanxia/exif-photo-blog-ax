@@ -24,4 +24,21 @@
 export * from '@/app/config';
 
 // ── Fork-only configuration ────────────────────────────────────────────────
-// (none yet — added by PLOG-8 / PLOG-12)
+
+// PLOG-9 Part 2 — AI Gateway. Model IDs are ENV-DRIVEN (never hardcoded from a
+// plan/doc): set AI_MODEL / AI_MODEL_FALLBACK to current Vercel AI Gateway
+// catalog ids (e.g. "openai/gpt-4o", "google/gemini-2.5-flash") — verify
+// against the LIVE catalog. The default below is a stable, currently-available
+// placeholder; override it in env for production. AI_GATEWAY_API_KEY enables
+// the gateway path (no per-provider key needed).
+export const AI_MODEL = process.env.AI_MODEL || 'openai/gpt-4o';
+export const AI_MODEL_FALLBACK = process.env.AI_MODEL_FALLBACK;
+export const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;
+
+// AI is enabled by either a direct OpenAI key OR an AI Gateway key. (Upstream's
+// AI_CONTENT_GENERATION_ENABLED keys only on OPENAI_SECRET_KEY; this fork-only
+// flag also accepts the gateway. Consumers that need gateway-only enablement
+// import this from config-fork; the rest still see the upstream flag.)
+export const AI_CONTENT_GENERATION_ENABLED_FORK = Boolean(
+  process.env.OPENAI_SECRET_KEY || process.env.AI_GATEWAY_API_KEY,
+);
