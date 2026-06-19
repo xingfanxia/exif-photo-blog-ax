@@ -45,6 +45,21 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 (tags pushed to origin). Surviving branches: `main`, `ax/overhaul`,
 `backup/main-pre-upstream-reset-2026-06-17`.
 
+### PLOG-3 — Explicit ordered migration runner (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/db/query.ts` | EDIT | Removed the JIT-DDL-from-read path (3-deep `migrationForError` nested catch + auto-`createPhotosTable`/`createAlbumsTable`/`createAboutTable` on missing-relation). `safelyQuery` now only retries `endpoint in transition` + logs/re-throws. Migrations run explicitly via `runMigrations`. | If upstream changes `safelyQuery`, keep the JIT-DDL removed; re-apply the trim. |
+| `src/db/migration.ts` | EDIT | Deleted `migrationForError` (only query.ts used it). `MIGRATIONS[]` unchanged. | Re-delete if a pull reintroduces it. |
+| `src/platforms/postgres.ts` | EDIT | Removed the no-op `catch (error) { throw error }` in `query()` (kept `finally { client.release() }`); **exported `pool`** so the runner can hold a dedicated client for the advisory lock. | Re-apply; keep `pool` exported. (SELECt typo + pool tuning are PLOG-8.) |
+| `jest.config.ts` | EDIT | Added `moduleNameMapper {'^@/(.*)$':'<rootDir>/src/$1'}` so `jest.mock('@/…')` + runtime `require('@/…')` resolve (SWC only rewrites static imports). | Keep on merge. |
+| `package.json` | EDIT | Added `db:migrate` script + `tsconfig-paths` devDep (CLI runner needs `@/` resolution under ts-node). | Re-add. |
+| `src/db/migrate.ts` | NEW | `runMigrations()`/`ensureBaseTables()` + `schema_migrations` ledger; serialized by a session `pg_advisory_lock` on a dedicated client (concurrency-safe across parallel deploy instances). | None (additive). |
+| `app/api/admin/migrate/route.ts` | NEW | Admin-gated POST entry (single admin-credentials provider → `session?.user` is the admin check) that calls `runMigrations()`. | None (additive). |
+| `scripts/db/migrate.ts` + `tsconfig.scripts.json` | NEW | Standalone CLI bootstrap entry (`npm run db:migrate`, loads `.env.local`) — the fresh-DB / predeploy path. ts-node-runnable via the scripts tsconfig. | None (additive). |
+
+**Note (vestigial fields):** `Migration.table?`/`fields[]` in `migration.ts` are now unused (their only consumer, `migrationForError`, was deleted). Left in place to keep the upstream MIGRATIONS[] diff minimal; the runner keys solely on `label`. **Migration 10** (`ALTER COLUMN iso TYPE INTEGER`, unguarded) is a same-type no-op on the fork's base schema and the `schema_migrations` ledger + atomic lock ensure it runs at most once — so the upstream SQL is left untouched.
+
 ---
 
 > Maintained per the overhaul plan (`docs/overhaul/07-IMPLEMENTATION-PLAN.md`).

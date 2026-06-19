@@ -35,7 +35,11 @@ Sequencing rule: **pain × (1/risk)**. Three phases — Foundations (honest gate
 
 ## Phase B — Pain-relief (the four owner-reported pains, S/M effort, low risk)
 
-### PLOG-3 — Explicit ordered migration runner (kill JIT-migration-on-error) `[deps: PLOG-1]`  *(promoted before indexes per review)*
+### 🟡 PLOG-3 — Explicit ordered migration runner (kill JIT-migration-on-error) `[deps: PLOG-1]`  *(promoted before indexes per review)* — CODE DONE; live-apply gated
+> Code oracle met: `npx jest --ci` → **17 suites / 49 passed**; new `__tests__/migrate.test.ts` (4 tests) verifies FK-safe base-table order, ordered apply on fresh DB, idempotent no-op when recorded, partial-state apply. JIT-DDL-from-read removed from `safelyQuery` (kept only the `endpoint in transition` retry + loud re-throw); `migrationForError` deleted (no callers); `postgres.ts` no-op catch removed. New: `src/db/migrate.ts` (`runMigrations`/`ensureBaseTables` + `schema_migrations` ledger), admin-gated `app/api/admin/migrate/route.ts`.
+> **Consequence:** with JIT-DDL gone, the schema must be created by the runner BEFORE the app/`next build` queries it. **Live-apply is owner-gated** (Critical Decision Trigger).
+> Reviews done (code-reviewer + database-reviewer): CRITICAL concurrency race fixed via session `pg_advisory_lock` on a dedicated client (`pool` now exported); partial-failure re-run window closed by the lock; bootstrap path added (`npm run db:migrate` CLI via `scripts/db/migrate.ts` + `tsconfig.scripts.json`, verified to load + reach `pool.connect()`); migrate.test.ts now 6 tests (incl. lock acquire/release + release-on-throw). `npx jest --ci` → **17 suites / 51 passed**.
+> **To bootstrap the empty live DB:** `npm run db:migrate` (loads `.env.local`) — or POST `/api/admin/migrate` signed-in. Branch-DB EXPLAIN idempotency oracle runs at live-apply.
 - Keep `MIGRATIONS[]` as ordered source of truth; make every entry idempotent.
 - `app/api/admin/migrate/route.ts` (new, admin-gated) or a predeploy step: create `schema_migrations` if absent, apply pending migrations in order, record each label — **outside** any query catch.
 - `src/db/query.ts:10-110`: delete the 3-deep nested catch + `migrationForError`-driven auto-DDL from the read path; keep the genuine re-throw + the `endpoint is in transition` retry. (Also remove the separate no-op `try/catch` in `postgres.ts` that only re-throws.) Remove `migrationForError` once no caller remains.

@@ -12,6 +12,13 @@ const config: Config = {
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  // next/jest resolves the `@/*` tsconfig path for static imports via SWC, but
+  // jest-resolve (used by jest.mock(...) targets and runtime require) has no
+  // mapper. Add the canonical one so jest.mock('@/...') and require('@/...')
+  // resolve like a normal import. Merged with next/jest's css/asset mocks.
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
 };
 
 // ESM-only deps that leak into the jsdom module graph (camelcase-keys →

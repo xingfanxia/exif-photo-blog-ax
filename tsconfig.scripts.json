@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "comment": "ts-node runs CommonJS; the base uses module:esnext + bundler resolution which ts-node can't execute directly. baseUrl is required for tsconfig-paths to resolve @/* in standalone scripts (PLOG-3 db:migrate). ignoreDeprecations silences TS6's baseUrl/node10 deprecation errors (these options are still required by ts-node/tsconfig-paths today).",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "rootDir": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "ignoreDeprecations": "6.0"
+  },
+  "ts-node": {
+    "transpileOnly": true
+  }
+}
