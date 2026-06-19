@@ -107,3 +107,10 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `src/platforms/storage/cloudflare-r2.ts` | EDIT | `cloudflareR2Delete` → `return await` (loud failures). | Re-apply. |
 | `src/photo/storage/server.ts` | EDIT | Parallelized the sm/md/lg variant writes (`Promise.all`). | Re-apply. |
 | `src/components/image/ImageMedium.tsx` | EDIT | Responsive card `sizes` default. | Re-apply. |
+
+### PLOG-7 — Detail ISR + in-viewport prefetch (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `app/p/[photoId]/page.tsx` | EDIT | `export const revalidate = 3600` (ISR). | Re-apply. |
+| `src/photo/PhotoMedium.tsx` | EDIT | `prefetch` driven by `useVisibility` (in-viewport), not the global flag. | Re-apply. |

@@ -17,6 +17,10 @@ import { staticallyGeneratePhotosIfConfigured } from '@/app/static';
 
 export const maxDuration = 60;
 
+// PLOG-7: ISR so detail pages beyond GENERATE_STATIC_PARAMS_LIMIT (1000) are
+// served from cache after first render instead of SSR on every request.
+export const revalidate = 3600;
+
 const getPhotosNearIdCachedCached = cache(async (photoId: string) => {
   const photo = await getPhotoCached(photoId);
   // Omit related photos when photo is excluded from feeds
