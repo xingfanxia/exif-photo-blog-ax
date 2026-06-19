@@ -24,7 +24,8 @@ Sequencing rule: **pain × (1/risk)**. Three phases — Foundations (honest gate
 - `git add docs/overhaul/` (00–07).
 - **Oracle:** `npx jest --ci` → `16 suites / 16 passed, 0 failed` (was 6 failed). `git ls-files docs/overhaul/ | wc -l` ≥ 8. imports-smoke green.
 
-### PLOG-2 — Fork contract (`CLAUDE.md`) + minimal `config-fork.ts` scaffold + branch cleanup `[deps: PLOG-1]`
+### ✅ PLOG-2 — Fork contract (`CLAUDE.md`) + minimal `config-fork.ts` scaffold + branch cleanup `[deps: PLOG-1]` — DONE (ax/overhaul)
+> Oracle met: `CLAUDE.md` = 92 lines (<150); `git diff --stat sambecker/main...HEAD -- src/app/config.ts` **empty**; 12 stale branches archive-tagged (recoverable via `archive/*`, pushed to origin) + deleted local+remote — `git branch` now only main/ax-overhaul/backup. `config-fork.ts` re-exports config (smoke-test verifies superset). Divergences logged in `UPSTREAM.md`.
 - `CLAUDE.md` (new, <150 lines, additive → never conflicts on merge): `main MUST stay == sambecker/main, AX work on ax/*`; upstream-sync procedure + **which `next.config.ts` hunks are AX's and why** (the one unavoidable hot-file divergence); verdict "fix don't rewrite" → `06`; conventions (env via `config.ts`/`config-fork.ts`, max-len 80, tests in `__tests__/`, the migration mechanism + index caveat); the `platforms/` module-map (infra clients vs camera-EXIF decoders); record the grid is **deliberately not de-cliented** (bundle acceptable).
 - `src/app/config-fork.ts` (new, minimal scaffold now): `export *` from `@/app/config` + a home for fork-only facts. Landing it here resolves the PLOG-8↔PLOG-12 circular dep (PLOG-8 writes its AI vars into this file; PLOG-12 expands it). **`config.ts` stays byte-identical to upstream.**
 - **Real decision on the 11 stale `ax/*` + `feature/*` branches** (500–665 file diffs from a 2025-01 merge-base = unmergeable archaeology): delete or archive-tag them; AI work is re-derived fresh per `03`/PLOG-8. (Not just "record" — act.)

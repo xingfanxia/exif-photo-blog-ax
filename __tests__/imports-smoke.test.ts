@@ -17,6 +17,7 @@
  */
 import * as redis from '@/platforms/redis';
 import * as config from '@/app/config';
+import * as configFork from '@/app/config-fork';
 import * as path from '@/app/path';
 import * as focal from '@/focal';
 import * as photo from '@/photo';
@@ -27,6 +28,7 @@ describe('module import smoke test', () => {
     const modules: [string, Record<string, unknown>][] = [
       ['@/platforms/redis', redis],
       ['@/app/config', config],
+      ['@/app/config-fork', configFork],
       ['@/app/path', path],
       ['@/focal', focal],
       ['@/photo', photo],
@@ -35,6 +37,14 @@ describe('module import smoke test', () => {
     for (const [name, mod] of modules) {
       expect(mod).toBeDefined();
       expect(Object.keys(mod).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('config-fork re-exports a superset of upstream config (PLOG-2)', () => {
+    // Every upstream config export must be reachable through config-fork so a
+    // call site can switch the import without losing any binding.
+    for (const key of Object.keys(config)) {
+      expect(key in configFork).toBe(true);
     }
   });
 
