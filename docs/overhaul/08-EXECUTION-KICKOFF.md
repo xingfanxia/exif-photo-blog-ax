@@ -1,5 +1,19 @@
 # Execution Kickoff Prompt — paste into a fresh session
 
+> ## ✅ EXECUTION COMPLETE (2026-06-19) — autonomous phase
+> This kickoff was executed. **All 14 milestones (PLOG-1..14) implemented + committed on `ax/overhaul`** (`main` byte-identical to `sambecker/main` throughout); `npx jest --ci` → **23 suites / 93 passed** (from a *lying* 6-failed-at-import baseline); `npm run build` → **exit 0** (0 relation-errors, 0 SSL-errors). **DB bootstrapped** (owner-confirmed) on the live Tokyo Supabase: schema + `schema_migrations`(11) + 14 indexes + `pg_trgm` + IMMUTABLE `photo_normalize_field` created, idempotent re-run no-op; `EXPLAIN(tag)` uses the GIN index. Reviews run (code-reviewer always; database-reviewer for schema/migrations; the PLOG-4 CRITICAL immutability bug was caught in review + fixed + validated live).
+>
+> **Fully done + live/offline-verified:** PLOG-1,2,3,4,5,6,7,8,9,10,11,12,13.
+> **Gated remainder (require the running app / live data / deploy — NOT safely doable autonomously):**
+> - **PLOG-14 UI refactors** (PhotoForm split, admin-subtree auth-gate, AppStateProvider split, CommandK first-paint) — render-smoke-oracle gated; PhotoForm is already <800 lines (split is legibility). The swallowed-storage-list-error fix shipped.
+> - **Live oracles needing photos:** PLOG-4 EXPLAIN-with-data, PLOG-5/6/7 browser perf traces, PLOG-9 live AI generation, PLOG-10 backfill run, PLOG-13 returns-N round-trip. → **upload photos** (each upload exercises the new AI stack + R2 variants).
+> - **Deploy confirms:** PLOG-8 dashboard (functions in `hnd1`, Supabase non-pausing tier, Fluid Compute). Set `AI_GATEWAY_API_KEY`+`AI_MODEL` before AI use.
+>
+> Per-milestone evidence + the exact remaining checklist: `07-IMPLEMENTATION-PLAN.md` + `UPSTREAM.md`.
+
+---
+
+
 > How to use: start a clean Claude Code session in this repo **with the `ax/overhaul` branch checked out** (the `docs/overhaul/` package lives here; `main` is byte-identical to `sambecker/main` and does NOT have it). Run in **normal mode (not full auto-accept)** so the Critical Decision Trigger confirmations reach you — the plan applies DB migrations. Paste the block below as the first message.
 
 ---
