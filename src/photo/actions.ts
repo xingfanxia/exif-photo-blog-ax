@@ -57,7 +57,7 @@ import { TAG_FAVS, Tags, isPhotoFav, isTagFavs } from '@/tag';
 import { convertPhotoToPhotoDbInsert, Photo, PhotoDbInsert } from '.';
 import { runAuthenticatedAdminServerAction } from '@/auth/server';
 import { AiImageQuery, getAiImageQuery, getAiTextFieldsToGenerate } from './ai';
-import { streamOpenAiImageQuery } from '@/platforms/openai';
+import { streamOpenAiImageQuery } from '@/platforms/ai';
 import {
   AI_TEXT_AUTO_GENERATED_FIELDS,
   AI_CONTENT_GENERATION_ENABLED,

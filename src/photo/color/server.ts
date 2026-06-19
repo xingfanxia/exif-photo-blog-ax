@@ -8,7 +8,7 @@ import { Oklch, PhotoColorData } from './client';
 import sharp from 'sharp';
 import { extractColors } from 'extract-colors';
 import { getImageBase64FromUrl } from '../server';
-import { generateOpenAiImageQuery } from '@/platforms/openai';
+import { generateOpenAiImageQuery } from '@/platforms/ai';
 import { calculateColorSort } from './sort';
 import { getOptimizedPhotoUrlForManipulation } from '../storage';
 
