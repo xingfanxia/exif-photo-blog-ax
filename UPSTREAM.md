@@ -142,3 +142,11 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `app/api/storage/presigned-url/[key]/route.ts` | EDIT | Validate `key` before signing a PUT (path-traversal/overwrite defense). | Re-apply. |
 
 **PLOG-12 follow-ups (NOT done):** config-fork expansion (config leaks), photoFormSchema z.coerce.number(), .env.example, SITE_TITLE→META_TITLE.
+
+### PLOG-14 (partial) — loud storage-list errors (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/platforms/storage/index.ts` | EDIT | `getStorageUrlsForPrefix` now logs loudly on a backend list failure (`listOrLogEmpty`) instead of silent `.catch(() => [])`; still annotate-and-continue. | Re-apply. |
+
+**PLOG-14 deferred (risky/large, render/bundle-oracle):** admin-subtree auth-gate (root-layout cookie read de-optimizes routes; needs client dynamic-import gate + handling AdminBatchEditPanel being an async server component), PhotoForm 732-line split, AppStateProvider split, CommandK first-paint, ADAPTERS-lookup refactor.
