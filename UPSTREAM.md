@@ -150,3 +150,13 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `src/platforms/storage/index.ts` | EDIT | `getStorageUrlsForPrefix` now logs loudly on a backend list failure (`listOrLogEmpty`) instead of silent `.catch(() => [])`; still annotate-and-continue. | Re-apply. |
 
 **PLOG-14 deferred (risky/large, render/bundle-oracle):** admin-subtree auth-gate (root-layout cookie read de-optimizes routes; needs client dynamic-import gate + handling AdminBatchEditPanel being an async server component), PhotoForm 732-line split, AppStateProvider split, CommandK first-paint, ADAPTERS-lookup refactor.
+
+### PLOG-10 — AI backfill worker + idempotency (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/db/migration.ts` | EDIT | Appended migration 11 (`metadata_status`+`input_hash` columns). | Re-apply (dynamic next label). |
+| `src/photo/ai/backfill.ts` + `__tests__/ai-backfill.test.ts` | NEW | Pure sha256 idempotency (`computeInputHash`/`shouldSkipBackfill`) + tests. | None (additive). |
+| `scripts/ai-backfill/index.ts` | NEW | Standalone worker (`npm run ai:backfill`). | None (additive). |
+| `src/platforms/openai.ts` | EDIT | `@ai-sdk/rsc` import made lazy (RSC-only; broke Node/ts-node worker). | Re-apply. |
+| `package.json` | EDIT | Added `ai:backfill` script. | Re-add. |

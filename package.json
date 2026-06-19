@@ -8,7 +8,8 @@
     "test": "jest --watch",
     "test:ci": "jest --ci",
     "db:migrate": "TS_NODE_PROJECT=tsconfig.scripts.json node --env-file=.env.local -r ts-node/register -r tsconfig-paths/register scripts/db/migrate.ts",
-    "analyze": "ANALYZE=true next build --webpack"
+    "analyze": "ANALYZE=true next build --webpack",
+    "ai:backfill": "TS_NODE_PROJECT=tsconfig.scripts.json node --env-file=.env.local -r ts-node/register -r tsconfig-paths/register scripts/ai-backfill/index.ts"
   },
   "packageManager": "pnpm@11.0.9",
   "dependencies": {

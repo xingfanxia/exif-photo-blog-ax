@@ -1,5 +1,4 @@
 import { generateText, Output, streamText } from 'ai';
-import { createStreamableValue } from '@ai-sdk/rsc';
 import { createOpenAI } from '@ai-sdk/openai';
 import { OPENAI_BASE_URL, OPENAI_MODEL, OPENAI_SECRET_KEY } from '@/app/config';
 import { removeBase64Prefix } from '@/utility/image';
@@ -64,6 +63,10 @@ export const streamOpenAiImageQuery = async (
 ) => {
   await checkRateLimitAndThrow();
 
+  // Lazy import: @ai-sdk/rsc is RSC-only (no CJS exports), so a top-level
+  // import would break Node/ts-node consumers of this module (e.g. the
+  // standalone ai-backfill worker, which never streams). PLOG-10.
+  const { createStreamableValue } = await import('@ai-sdk/rsc');
   const stream = createStreamableValue('');
 
   const args = getImageTextArgs(imageBase64, query);

@@ -116,4 +116,13 @@ export const MIGRATIONS: Migration[] = [{
     ALTER TABLE photos
     ALTER COLUMN iso TYPE INTEGER
   `),
+}, {
+  // PLOG-10: idempotency columns for the batch AI backfill worker.
+  label: '11: AI Backfill Idempotency',
+  fields: ['metadata_status', 'input_hash'],
+  run: () => sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS metadata_status TEXT,
+    ADD COLUMN IF NOT EXISTS input_hash TEXT
+  `,
 }];
