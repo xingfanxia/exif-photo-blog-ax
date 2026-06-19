@@ -60,6 +60,14 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 
 **Note (vestigial fields):** `Migration.table?`/`fields[]` in `migration.ts` are now unused (their only consumer, `migrationForError`, was deleted). Left in place to keep the upstream MIGRATIONS[] diff minimal; the runner keys solely on `label`. **Migration 10** (`ALTER COLUMN iso TYPE INTEGER`, unguarded) is a same-type no-op on the fork's base schema and the `schema_migrations` ledger + atomic lock ensure it runs at most once — so the upstream SQL is left untouched.
 
+### PLOG-4 — DB indexes via the runner (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/db/index.ts` | EDIT | Exported `parameterizeForDb` + extracted `PHOTO_SEARCH_EXPRESSION` const (used by the ILIKE query AND the trgm index — single source of truth). Behavior unchanged. | Keep the export; re-extract the const if a pull reverts. |
+| `src/db/indexes.ts` | NEW | `PHOTO_INDEXES` (13 idempotent CREATE INDEX) + `PG_TRGM_EXTENSION_DDL`. Expression/trgm indexes generated from the shared `db/index.ts` expressions. | None (additive). |
+| `src/db/migrate.ts` | EDIT | `runMigrations` now also runs `CREATE EXTENSION pg_trgm` + the index set after column migrations; result includes `indexes[]`. | None. |
+
 ---
 
 > Maintained per the overhaul plan (`docs/overhaul/07-IMPLEMENTATION-PLAN.md`).

@@ -92,6 +92,19 @@ describe('runMigrations (PLOG-3 ordered idempotent runner)', () => {
     expect(inserts).toHaveLength(0);
   });
 
+  it('ensures pg_trgm + all indexes after migrating (PLOG-4)', async () => {
+    wireQuery([]);
+    const result = await runMigrations();
+    expect(result.indexes.length).toBeGreaterThanOrEqual(13);
+    const ran = (re: RegExp) =>
+      mockQuery.mock.calls.some(([t]) => re.test(t));
+    expect(ran(/CREATE EXTENSION IF NOT EXISTS pg_trgm/i)).toBe(true);
+    expect(ran(/idx_photos_tags_gin .*USING GIN \(tags\)/is)).toBe(true);
+    expect(ran(/idx_photos_search_trgm.*gin_trgm_ops/is)).toBe(true);
+    // expression index uses the parameterizeForDb normalization
+    expect(ran(/idx_photos_make_param.*REGEXP_REPLACE/is)).toBe(true);
+  });
+
   it('serializes runners via an advisory lock and always releases it', async () => {
     wireQuery([]);
     await runMigrations();

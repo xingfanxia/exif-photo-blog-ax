@@ -16,7 +16,9 @@ export const PHOTO_DEFAULT_LIMIT = 100;
 const CHARACTERS_TO_REMOVE = [',', '/'];
 const CHARACTERS_TO_REPLACE = ['+', '&', '|', ':', '_', ' '];
 
-const parameterizeForDb = (field: string) =>
+// Exported so PLOG-4 expression indexes use the IDENTICAL expression as the
+// WHERE filters below — a one-function-off expression index is silently unused.
+export const parameterizeForDb = (field: string) =>
   `REGEXP_REPLACE(
     REGEXP_REPLACE(
       LOWER(TRIM(${field})),
@@ -24,6 +26,11 @@ const parameterizeForDb = (field: string) =>
     ),
     '[${CHARACTERS_TO_REPLACE.join('')}]', '-', 'g'
   )`;
+
+// Single source of truth for the full-text search expression, shared by the
+// ILIKE query (below) and the PLOG-4 pg_trgm GIN index so they can't desync.
+export const PHOTO_SEARCH_EXPRESSION =
+  `CONCAT(title, ' ', caption, ' ', semantic_description)`;
 
 export type PhotoQueryOptions = {
   sortBy?: SortBy
@@ -105,8 +112,7 @@ export const getWheresFromOptions = (
     wheresValues.push(updatedBefore.toISOString());
   }
   if (query) {
-    // eslint-disable-next-line max-len
-    wheres.push(`CONCAT(title, ' ', caption, ' ', semantic_description) ILIKE $${valuesIndex++}`);
+    wheres.push(`${PHOTO_SEARCH_EXPRESSION} ILIKE $${valuesIndex++}`);
     wheresValues.push(`%${query.toLocaleLowerCase()}%`);
   }
   if (maximumAspectRatio) {

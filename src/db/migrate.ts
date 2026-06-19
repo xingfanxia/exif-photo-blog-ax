@@ -1,5 +1,6 @@
 import { pool, query } from '@/platforms/postgres';
 import { MIGRATIONS } from '@/db/migration';
+import { PHOTO_INDEXES, PG_TRGM_EXTENSION_DDL } from '@/db/indexes';
 import { createPhotosTable } from '@/photo/query';
 import { createAlbumsTable, createAlbumPhotoTable } from '@/album/query';
 import { createAboutTable } from '@/about/query';
@@ -35,6 +36,7 @@ const MIGRATION_ADVISORY_LOCK_KEY = 4_771_001;
 export interface MigrationRunResult {
   applied: string[]; // labels applied this run
   skipped: string[]; // labels already applied (recorded in schema_migrations)
+  indexes: string[]; // index names ensured (PLOG-4)
 }
 
 // Order matters for FK dependencies: photos first; album_photo FKs both
@@ -82,7 +84,14 @@ export const runMigrations = async (): Promise<MigrationRunResult> => {
       applied.push(migration.label);
     }
 
-    return { applied, skipped };
+    // Extensions + indexes (PLOG-4): applied after columns exist; all
+    // idempotent (CREATE … IF NOT EXISTS), so safe on every run.
+    await query(PG_TRGM_EXTENSION_DDL);
+    for (const idx of PHOTO_INDEXES) {
+      await query(idx.ddl);
+    }
+
+    return { applied, skipped, indexes: PHOTO_INDEXES.map(i => i.name) };
   } finally {
     try {
       await client.query('SELECT pg_advisory_unlock($1)', [
