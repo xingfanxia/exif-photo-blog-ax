@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis';
+import type { Redis } from '@upstash/redis';
 
 /**
  * Normalizes a Redis URL for use with @upstash/redis:
@@ -19,6 +19,8 @@ export const normalizeRedisUrl = (
 
 const KEY_TEST = 'test';
 
+// Two-state sentinel: `null` = not yet resolved; `undefined` = resolved with
+// no client (REDIS_URL/REDIS_TOKEN unset) so we never re-evaluate per call.
 let _redis: Redis | undefined | null = null;
 
 /**
@@ -29,9 +31,16 @@ export const getRedis = (): Redis | undefined => {
   if (_redis === null) {
     const { REDIS_URL, REDIS_TOKEN } =
       require('@/app/config') as typeof import('@/app/config');
-    _redis = REDIS_URL && REDIS_TOKEN
-      ? new Redis({ url: REDIS_URL, token: REDIS_TOKEN })
-      : undefined;
+    if (REDIS_URL && REDIS_TOKEN) {
+      // Lazy value-require: keeps the @upstash/redis SDK (ESM-only
+      // `uncrypto` dep) out of the static module graph so importing
+      // `config` under jsdom/jest doesn't crash. Type is import-type only.
+      const { Redis } =
+        require('@upstash/redis') as typeof import('@upstash/redis');
+      _redis = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
+    } else {
+      _redis = undefined;
+    }
   }
   return _redis;
 };

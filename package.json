@@ -5,7 +5,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "jest --watch --transformIgnorePatterns 'node_modules/(?!my-library-dir)/'",
+    "test": "jest --watch",
+    "test:ci": "jest --ci",
     "analyze": "ANALYZE=true next build --webpack"
   },
   "packageManager": "pnpm@11.0.9",

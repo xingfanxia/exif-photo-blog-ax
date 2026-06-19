@@ -16,7 +16,8 @@ Sequencing rule: **pain × (1/risk)**. Three phases — Foundations (honest gate
 
 ## Phase A — Foundations (pure-additive, zero user-facing risk, make gates honest)
 
-### PLOG-1 — Honest test signal + track docs `[deps: none]`
+### ✅ PLOG-1 — Honest test signal + track docs `[deps: none]` — DONE (ax/overhaul)
+> Oracle met: `npx jest --ci` → **16 suites / 16 passed, 0 failed** (was 6 failed), deterministic across runs; imports-smoke green; docs/overhaul tracked = 9 (≥8). Root cause was broader than redis alone — a transitive ESM-only subtree (`@upstash/redis→uncrypto`, `camelcase-keys→{map-obj,camelcase,quick-lru}`, `nanoid`) leaked through the jsdom graph; fixed via lazy redis require + `transformIgnorePatterns` allow-list (the class fix). Live-network `github.test.ts` excluded from the gate. Divergences logged in `UPSTREAM.md` (created early).
 - `src/platforms/redis.ts:1`: move the top-level `import { Redis } from '@upstash/redis'` to a lazy `await import()`/`require` **inside `getRedis()`** (already lazy at `:28`) — stops the SDK leaking into the jsdom module graph.
 - `package.json`: add `"test:ci": "jest --ci"` (only script today is `jest --watch`, unusable as a gate).
 - `__tests__/imports-smoke.test.ts` (new): assert the previously-crashing modules import cleanly under jsdom — permanent regression guard for the eager-import class.
