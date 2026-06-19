@@ -170,3 +170,10 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `__tests__/db-query.test.ts` | NEW | Characterization of the `$N` binding contract. | None (additive). |
 
 **PLOG-13 follow-up (DB-integration-gated):** consolidate `getPhotosNearId` (row_number CTE) + `getPhotosMeta` through ParamBuilder; integration round-trip oracle needs a populated branch DB.
+
+### PLOG-12 (more) — NaN-safe form numeric coercion (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/photo/form/index.ts` | EDIT | `parseFormNumber`/`parseFormInt` (`z.coerce.number().finite()`) replace NaN-unsafe parseInt/parseFloat in convertFormDataToPhotoDbInsert. | Re-apply. |
+| `__tests__/photo-form.test.ts` | NEW | NaN-safety tests. | None (additive). |
