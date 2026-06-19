@@ -92,18 +92,46 @@ describe('runMigrations (PLOG-3 ordered idempotent runner)', () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it('ensures pg_trgm + all indexes after migrating (PLOG-4)', async () => {
-    wireQuery([]);
-    const result = await runMigrations();
-    expect(result.indexes.length).toBeGreaterThanOrEqual(13);
-    const ran = (re: RegExp) =>
-      mockQuery.mock.calls.some(([t]) => re.test(t));
-    expect(ran(/CREATE EXTENSION IF NOT EXISTS pg_trgm/i)).toBe(true);
-    expect(ran(/idx_photos_tags_gin .*USING GIN \(tags\)/is)).toBe(true);
-    expect(ran(/idx_photos_search_trgm.*gin_trgm_ops/is)).toBe(true);
-    // expression index uses the parameterizeForDb normalization
-    expect(ran(/idx_photos_make_param.*REGEXP_REPLACE/is)).toBe(true);
-  });
+  it('ensures pg_trgm + immutable fn + all indexes after migrating (PLOG-4)',
+    async () => {
+      wireQuery([]);
+      const result = await runMigrations();
+      expect(result.indexes.length).toBeGreaterThanOrEqual(13);
+      const ran = (re: RegExp) =>
+        mockQuery.mock.calls.some(([t]) => re.test(t));
+      expect(ran(/CREATE EXTENSION IF NOT EXISTS pg_trgm/i)).toBe(true);
+      // IMMUTABLE normalizer must be created before the expression indexes
+      expect(ran(/CREATE OR REPLACE FUNCTION photo_normalize_field/i))
+        .toBe(true);
+      expect(ran(/idx_photos_tags_gin .*USING GIN \(tags\)/is)).toBe(true);
+      // trgm search index over the COALESCE (immutable) expression
+      expect(ran(/idx_photos_search_trgm.*COALESCE.*gin_trgm_ops/is))
+        .toBe(true);
+      // expression index calls the IMMUTABLE function (not inline LOWER)
+      expect(ran(/idx_photos_make_param.*photo_normalize_field/is)).toBe(true);
+      // partial feed index bakes in the hidden predicate
+      expect(ran(/idx_photos_feed_taken_at.*WHERE hidden IS NOT TRUE/is))
+        .toBe(true);
+    });
+
+  it('throws loudly (aggregate) if any index fails, after attempting all',
+    async () => {
+      wireQuery([]);
+      // Fail one index DDL; the loop must still attempt the rest then throw.
+      mockQuery.mockImplementation((text: string) => {
+        if (/SELECT label FROM schema_migrations/i.test(text)) {
+          return Promise.resolve({ rows: [] });
+        }
+        if (/idx_photos_tags_gin/i.test(text)) {
+          return Promise.reject(new Error('boom-tags'));
+        }
+        return Promise.resolve({ rows: [] });
+      });
+      await expect(runMigrations()).rejects.toThrow(/Index creation failed/i);
+      // the trgm search index was still attempted despite the earlier failure
+      expect(mockQuery.mock.calls.some(([t]) =>
+        /idx_photos_search_trgm/i.test(t))).toBe(true);
+    });
 
   it('serializes runners via an advisory lock and always releases it', async () => {
     wireQuery([]);

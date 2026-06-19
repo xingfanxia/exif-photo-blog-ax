@@ -16,21 +16,41 @@ export const PHOTO_DEFAULT_LIMIT = 100;
 const CHARACTERS_TO_REMOVE = [',', '/'];
 const CHARACTERS_TO_REPLACE = ['+', '&', '|', ':', '_', ' '];
 
-// Exported so PLOG-4 expression indexes use the IDENTICAL expression as the
-// WHERE filters below — a one-function-off expression index is silently unused.
-export const parameterizeForDb = (field: string) =>
+// Raw normalization SQL, kept in lockstep with utility/string.ts parameterize.
+const normalizeSql = (value: string) =>
   `REGEXP_REPLACE(
     REGEXP_REPLACE(
-      LOWER(TRIM(${field})),
+      LOWER(TRIM(${value})),
       '[${CHARACTERS_TO_REMOVE.join('')}]', '', 'g'
     ),
     '[${CHARACTERS_TO_REPLACE.join('')}]', '-', 'g'
   )`;
 
+// PLOG-4: expression indexes require every function in the expression to be
+// IMMUTABLE, but on Supabase's ICU collation LOWER() is only STABLE — so an
+// inline REGEXP_REPLACE(LOWER(TRIM(col))) index is rejected with "functions in
+// index expression must be marked IMMUTABLE". We wrap the normalization in an
+// explicitly-IMMUTABLE SQL function (created by the migration runner) and call
+// it from BOTH the WHERE filters and the expression indexes, so the planner's
+// expression-match can't silently miss. IMMUTABLE is a deliberate assertion:
+// the normalization is ASCII slug logic that must not track collation changes.
+export const PHOTO_NORMALIZE_FN = 'photo_normalize_field';
+export const PHOTO_NORMALIZE_FUNCTION_DDL =
+  `CREATE OR REPLACE FUNCTION ${PHOTO_NORMALIZE_FN}(value text)
+   RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+     SELECT ${normalizeSql('value')}
+   $$`;
+
+export const parameterizeForDb = (field: string) =>
+  `${PHOTO_NORMALIZE_FN}(${field})`;
+
 // Single source of truth for the full-text search expression, shared by the
 // ILIKE query (below) and the PLOG-4 pg_trgm GIN index so they can't desync.
+// COALESCE + `||` are IMMUTABLE (CONCAT is only STABLE and would be rejected
+// by the expression index); the COALESCE replicates CONCAT's NULL-as-empty.
 export const PHOTO_SEARCH_EXPRESSION =
-  `CONCAT(title, ' ', caption, ' ', semantic_description)`;
+  `(COALESCE(title, '') || ' ' || COALESCE(caption, '') || ` +
+  `' ' || COALESCE(semantic_description, ''))`;
 
 export type PhotoQueryOptions = {
   sortBy?: SortBy
@@ -154,7 +174,9 @@ export const getWheresFromOptions = (
     wheresValues.push(album.id);
   }
   if (tag) {
-    wheres.push(`$${valuesIndex++}=ANY(tags)`);
+    // `tags @> ARRAY[$n]` (containment) is GIN-indexable via array_ops;
+    // the equivalent `$n = ANY(tags)` is NOT and would seq-scan (PLOG-4 N1).
+    wheres.push(`tags @> ARRAY[$${valuesIndex++}]::varchar[]`);
     wheresValues.push(tag);
   }
   if (film) {

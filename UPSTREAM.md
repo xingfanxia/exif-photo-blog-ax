@@ -64,9 +64,11 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 
 | File | Kind | What & why | Pull-reconcile note |
 |---|---|---|---|
-| `src/db/index.ts` | EDIT | Exported `parameterizeForDb` + extracted `PHOTO_SEARCH_EXPRESSION` const (used by the ILIKE query AND the trgm index — single source of truth). Behavior unchanged. | Keep the export; re-extract the const if a pull reverts. |
-| `src/db/indexes.ts` | NEW | `PHOTO_INDEXES` (13 idempotent CREATE INDEX) + `PG_TRGM_EXTENSION_DDL`. Expression/trgm indexes generated from the shared `db/index.ts` expressions. | None (additive). |
-| `src/db/migrate.ts` | EDIT | `runMigrations` now also runs `CREATE EXTENSION pg_trgm` + the index set after column migrations; result includes `indexes[]`. | None. |
+| `src/db/index.ts` | EDIT | (a) `parameterizeForDb` now emits a call to an IMMUTABLE SQL fn `photo_normalize_field()` (exported `PHOTO_NORMALIZE_FUNCTION_DDL`) instead of inline `REGEXP_REPLACE(LOWER(TRIM()))` — required because LOWER is only STABLE on Supabase ICU collation, so inline expression indexes throw. WHERE + index call the SAME fn. (b) `PHOTO_SEARCH_EXPRESSION` uses `COALESCE+\|\|` (IMMUTABLE) not `CONCAT` (STABLE → rejected by the trgm index). (c) tag filter rewritten `$n=ANY(tags)` → `tags @> ARRAY[$n]::varchar[]` (GIN-indexable). All behavior-preserving. | Keep all three; re-apply if a pull reverts the query builder. |
+| `src/db/indexes.ts` | NEW | 14 idempotent CREATE INDEX + `PG_TRGM_EXTENSION_DDL`. Feed indexes are PARTIAL (`(taken_at DESC) WHERE hidden IS NOT TRUE`, +compound with exclude_from_feeds) not composite. Expression/trgm indexes use the shared IMMUTABLE fn + COALESCE expr. | None (additive). |
+| `src/db/migrate.ts` | EDIT | `runMigrations` runs `CREATE EXTENSION pg_trgm` + the IMMUTABLE normalizer fn + the index set after column migrations; per-index try/catch (loud log) collects failures and throws an aggregate so one bad index can't silently skip the search index. Result includes `indexes[]`. | None. |
+
+**Deferred to live-data EXPLAIN (PLOG-4 review M2/N1):** verify the 5 plain GROUP-BY btrees (make/model/film/recipe_title/focal_length) are actually used vs HashAggregate at blog scale (drop if dead weight); confirm `tags @> ARRAY[$1]` uses `idx_photos_tags_gin` and expression indexes are Index-Scanned (not Seq Scan). Needs photos in the DB.
 
 ---
 

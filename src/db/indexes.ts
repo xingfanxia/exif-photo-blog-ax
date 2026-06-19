@@ -24,10 +24,25 @@ const index = (name: string, body: string): DbIndex => ({
 });
 
 export const PHOTO_INDEXES: DbIndex[] = [
-  // Feed ordering with the always-present hidden predicate.
-  index('idx_photos_hidden_taken_at', 'photos (hidden, taken_at DESC)'),
-  index('idx_photos_hidden_created_at', 'photos (hidden, created_at DESC)'),
-  // tag filter: `$1 = ANY(tags)`
+  // Feed ordering. `hidden IS NOT TRUE` (always present) isn't a clean
+  // equality, so a composite `(hidden, …)` btree is mostly wasted; a PARTIAL
+  // index bakes the predicate in and serves `ORDER BY … DESC LIMIT n`
+  // directly (PLOG-4 H2). The public feed also filters exclude_from_feeds, so
+  // a compound partial serves that hot shape (H3).
+  index(
+    'idx_photos_feed_taken_at',
+    'photos (taken_at DESC) WHERE hidden IS NOT TRUE',
+  ),
+  index(
+    'idx_photos_feed_created_at',
+    'photos (created_at DESC) WHERE hidden IS NOT TRUE',
+  ),
+  index(
+    'idx_photos_public_feed_taken_at',
+    'photos (taken_at DESC) ' +
+      'WHERE hidden IS NOT TRUE AND exclude_from_feeds IS NOT TRUE',
+  ),
+  // tag filter: `tags @> ARRAY[$1]` (GIN array_ops containment).
   index('idx_photos_tags_gin', 'photos USING GIN (tags)'),
   // GROUP BY aggregation columns (camera/film/recipe/focal meta counts).
   index('idx_photos_make', 'photos (make)'),

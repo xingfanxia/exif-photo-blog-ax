@@ -1,6 +1,7 @@
 import { pool, query } from '@/platforms/postgres';
 import { MIGRATIONS } from '@/db/migration';
 import { PHOTO_INDEXES, PG_TRGM_EXTENSION_DDL } from '@/db/indexes';
+import { PHOTO_NORMALIZE_FUNCTION_DDL } from '@/db';
 import { createPhotosTable } from '@/photo/query';
 import { createAlbumsTable, createAlbumPhotoTable } from '@/album/query';
 import { createAboutTable } from '@/about/query';
@@ -84,11 +85,28 @@ export const runMigrations = async (): Promise<MigrationRunResult> => {
       applied.push(migration.label);
     }
 
-    // Extensions + indexes (PLOG-4): applied after columns exist; all
-    // idempotent (CREATE … IF NOT EXISTS), so safe on every run.
+    // Extensions, the IMMUTABLE normalizer function, then indexes (PLOG-4):
+    // applied after columns exist; all idempotent. The function must precede
+    // the expression indexes that call it. Each index is isolated so one
+    // failure can't prevent the rest (esp. the trgm search index) being
+    // created, but any failure still surfaces loudly via an aggregate throw.
     await query(PG_TRGM_EXTENSION_DDL);
+    await query(PHOTO_NORMALIZE_FUNCTION_DDL);
+    const indexFailures: string[] = [];
     for (const idx of PHOTO_INDEXES) {
-      await query(idx.ddl);
+      try {
+        await query(idx.ddl);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(`Index ${idx.name} failed: ${message}`, { error: e });
+        indexFailures.push(`${idx.name}: ${message}`);
+      }
+    }
+    if (indexFailures.length > 0) {
+      throw new Error(
+        `Index creation failed for ${indexFailures.length} index(es): ` +
+        indexFailures.join('; '),
+      );
     }
 
     return { applied, skipped, indexes: PHOTO_INDEXES.map(i => i.name) };
