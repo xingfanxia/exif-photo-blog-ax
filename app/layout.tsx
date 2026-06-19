@@ -26,6 +26,7 @@ import SwrConfigClient from '@/swr/SwrConfigClient';
 import ShareModals from '@/share/ShareModals';
 import AdminAppPanels from '@/admin/AdminAppPanels';
 import { revalidatePath } from 'next/cache';
+import { Suspense } from 'react';
 import RecipeModal from '@/recipe/RecipeModal';
 import ThemeColors from '@/app/ThemeColors';
 import AppTextProvider from '@/i18n/state/AppTextProvider';
@@ -137,7 +138,11 @@ export default function RootLayout({
                       </main>
                       <Footer />
                     </div>
-                    <CommandK />
+                    {/* PLOG-14: stream CommandK's category/meta aggregations
+                        so they don't block first paint on dynamic/ISR routes */}
+                    <Suspense fallback={null}>
+                      <CommandK />
+                    </Suspense>
                   </SharedHoverProvider>
                 </SwrConfigClient>
                 <Analytics debug={false} />

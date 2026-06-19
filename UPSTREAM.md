@@ -202,3 +202,9 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `app/layout.tsx` | EDIT | Replace the two server-rendered admin panels with `<AdminAppPanels>`. | Re-apply. |
 
 **Browser-verified:** anonymous SSR + client = 0 admin panels; signed-in = panels mount; routes static; build exit 0.
+
+### PLOG-14 (CommandK) — non-blocking first paint (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `app/layout.tsx` | EDIT | Wrap `<CommandK />` in `<Suspense fallback={null}>` so its aggregations stream instead of blocking first paint. | Re-apply. |
