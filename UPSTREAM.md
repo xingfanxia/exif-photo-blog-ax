@@ -192,3 +192,13 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | File | Kind | What & why | Pull-reconcile note |
 |---|---|---|---|
 | `src/photo/query.ts` | EDIT | `getPhotosNearId` continues the wheres `$N` sequence via ParamBuilder (was a 2nd manual valuesIndex++). Binding-identical; live-validated to execute. | Re-apply. |
+
+### PLOG-14 (auth-gate) — admin subtree gated from anonymous (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/admin/AdminAppPanels.tsx` | NEW | Client gate: renders the upload + batch-edit panels only when `isUserSignedInEager` (client cookie, no server read → routes stay static); dynamic ssr:false (no admin JS for anonymous); batch data via SWR. | None (additive). |
+| `src/admin/actions.ts` | EDIT | Added `getBatchEditDataAction` (admin-gated albums+tags for client SWR). | Re-apply. |
+| `app/layout.tsx` | EDIT | Replace the two server-rendered admin panels with `<AdminAppPanels>`. | Re-apply. |
+
+**Browser-verified:** anonymous SSR + client = 0 admin panels; signed-in = panels mount; routes static; build exit 0.

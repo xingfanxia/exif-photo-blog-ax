@@ -24,7 +24,7 @@ import Footer from '@/app/Footer';
 import CommandK from '@/cmdk/CommandK';
 import SwrConfigClient from '@/swr/SwrConfigClient';
 import ShareModals from '@/share/ShareModals';
-import AdminUploadPanel from '@/admin/upload/AdminUploadPanel';
+import AdminAppPanels from '@/admin/AdminAppPanels';
 import { revalidatePath } from 'next/cache';
 import RecipeModal from '@/recipe/RecipeModal';
 import ThemeColors from '@/app/ThemeColors';
@@ -32,7 +32,6 @@ import AppTextProvider from '@/i18n/state/AppTextProvider';
 import SharedHoverProvider from '@/components/shared-hover/SharedHoverProvider';
 import { PATH_FEED_JSON, PATH_RSS_XML } from '@/app/path';
 import SelectPhotosProvider from '@/admin/select/SelectPhotosProvider';
-import AdminBatchEditPanel from '@/admin/select/AdminBatchEditPanel';
 import Script from 'next/script';
 
 import '../tailwind.css';
@@ -125,16 +124,9 @@ export default function RootLayout({
                           'mb-12',
                           'space-y-5',
                         )}>
-                          <AdminUploadPanel
+                          <AdminAppPanels
                             shouldResize={!PRESERVE_ORIGINAL_UPLOADS}
                             onLastUpload={async () => {
-                              'use server';
-                              // Update upload count in admin nav
-                              revalidatePath('/admin', 'layout');
-                            }}
-                          />
-                          <AdminBatchEditPanel
-                            onBatchActionComplete={async () => {
                               'use server';
                               // Update upload count in admin nav
                               revalidatePath('/admin', 'layout');

@@ -22,6 +22,18 @@ import { getAlbumsWithMetaCached } from '@/album/cache';
 
 export type AdminData = Awaited<ReturnType<typeof getAdminDataAction>>;
 
+// PLOG-14: batch-edit albums/tags fetched client-side (SWR) when signed in, so
+// the admin panels gate out of the anonymous tree without a server cookie read
+// (keeps routes static) — see AdminAppPanels.
+export const getBatchEditDataAction = async () =>
+  runAuthenticatedAdminServerAction(async () => {
+    const [uniqueAlbums, uniqueTags] = await Promise.all([
+      getAlbumsWithMetaCached().catch(() => []),
+      getUniqueTagsCached().catch(() => []),
+    ]);
+    return { uniqueAlbums, uniqueTags };
+  });
+
 export const getAdminDataAction = async () =>
   runAuthenticatedAdminServerAction(async () => {
     const [
