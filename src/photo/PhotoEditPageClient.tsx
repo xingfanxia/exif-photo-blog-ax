@@ -12,7 +12,7 @@ import { Tags } from '@/tag';
 import AiButton from './ai/AiButton';
 import usePhotoFormParent from './form/usePhotoFormParent';
 import ExifCaptureButton from '@/admin/ExifCaptureButton';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Recipes } from '@/recipe';
 import { Films } from '@/film';
 import { StorageListResponse } from '@/platforms/storage';
@@ -27,7 +27,6 @@ export default function PhotoEditPageClient({
   uniqueRecipes,
   uniqueFilms,
   hasAiTextGeneration,
-  imageThumbnailBase64,
   blurData,
 }: {
   photo: Photo
@@ -38,10 +37,19 @@ export default function PhotoEditPageClient({
   uniqueRecipes: Recipes
   uniqueFilms: Films
   hasAiTextGeneration: boolean
-  imageThumbnailBase64: string
   blurData: string
 }) {
   const photoForm = convertPhotoToFormData(photo);
+
+  // Lazily fetch the AI thumbnail only when AI text generation is requested,
+  // instead of a blocking full-image fetch + sharp pass on every edit-open
+  // (PLOG-5). useAiImageQueries fetches once and caches the result.
+  const getImageThumbnailBase64 = useCallback(async () => {
+    const res = await fetch(`/api/admin/photos/${photo.id}/ai-thumbnail`);
+    if (!res.ok) { return undefined; }
+    const { thumbnailBase64 } = await res.json();
+    return thumbnailBase64 as string | undefined;
+  }, [photo.id]);
 
   const {
     pending,
@@ -53,7 +61,7 @@ export default function PhotoEditPageClient({
     aiContent,
   } = usePhotoFormParent({
     photoForm,
-    imageThumbnailBase64,
+    getImageThumbnailBase64,
   });
 
   const [updatedExifData, setUpdatedExifData] =

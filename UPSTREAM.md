@@ -70,6 +70,18 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 
 **Deferred to live-data EXPLAIN (PLOG-4 review M2/N1):** verify the 5 plain GROUP-BY btrees (make/model/film/recipe_title/focal_length) are actually used vs HashAggregate at blog scale (drop if dead weight); confirm `tags @> ARRAY[$1]` uses `idx_photos_tags_gin` and expression indexes are Index-Scanned (not Seq Scan). Needs photos in the DB.
 
+### PLOG-5 — Edit-page lazy blur + lazy AI thumbnail (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `app/admin/photos/[photoId]/edit/page.tsx` | EDIT | Use persisted `photo.blurData`; stop computing the AI thumbnail at render; drop the `imageThumbnailBase64`/recomputed-blur props. | Keep the lazy approach; re-apply if upstream reworks the edit page. |
+| `app/api/admin/photos/[photoId]/ai-thumbnail/route.ts` | NEW | Admin-gated GET returning the AI thumbnail base64 on demand (502 on empty). | None (additive). |
+| `src/photo/PhotoEditPageClient.tsx` | EDIT | Drop `imageThumbnailBase64` prop; add a `getImageThumbnailBase64` thunk (fetches the route). | Re-apply. |
+| `src/photo/form/usePhotoFormParent.ts` | EDIT | Accept `imageThumbnailBase64?` (upload) OR `getImageThumbnailBase64?` (edit). | Re-apply. |
+| `src/photo/ai/useAiImageQueries.ts` | EDIT | Build a once-resolved (retry-able) thumbnail resolver shared across the 5 sub-queries. | Re-apply. |
+| `src/photo/ai/useAiImageQuery.ts` | EDIT | First param now a lazy `getImageBase64` thunk; loud error on empty. | Re-apply. |
+| `src/photo/ai/useTitleCaptionAiImageQuery.ts` | EDIT | Thread the lazy thunk. | Re-apply. |
+
 ---
 
 > Maintained per the overhaul plan (`docs/overhaul/07-IMPLEMENTATION-PLAN.md`).
