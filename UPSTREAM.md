@@ -160,3 +160,13 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `scripts/ai-backfill/index.ts` | NEW | Standalone worker (`npm run ai:backfill`). | None (additive). |
 | `src/platforms/openai.ts` | EDIT | `@ai-sdk/rsc` import made lazy (RSC-only; broke Node/ts-node worker). | Re-apply. |
 | `package.json` | EDIT | Added `ai:backfill` script. | Re-add. |
+
+### PLOG-13 (core) — ParamBuilder + binding characterization (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/db/query.ts` | EDIT | Added `ParamBuilder` class (encapsulates the `$N` sequence). | Keep; re-apply. |
+| `src/db/index.ts` | EDIT | `getWheresFromOptions` refactored onto ParamBuilder (binding-identical, characterization-locked). | Re-apply. |
+| `__tests__/db-query.test.ts` | NEW | Characterization of the `$N` binding contract. | None (additive). |
+
+**PLOG-13 follow-up (DB-integration-gated):** consolidate `getPhotosNearId` (row_number CTE) + `getPhotosMeta` through ParamBuilder; integration round-trip oracle needs a populated branch DB.

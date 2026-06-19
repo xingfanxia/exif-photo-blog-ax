@@ -1,4 +1,5 @@
 import { parameterize } from '@/utility/string';
+import { ParamBuilder } from '@/db/query';
 import { PhotoSetCategory } from '@/category';
 import { Camera } from '@/camera';
 import { Lens } from '@/lens';
@@ -104,8 +105,10 @@ export const getWheresFromOptions = (
   } = options;
 
   const wheres = [] as string[];
-  const wheresValues = [] as (string | number)[];
-  let valuesIndex = initialValuesIndex;
+  // PLOG-13: one ParamBuilder owns the $N sequence; `pb.add(v)` records the
+  // value AND returns its placeholder, replacing the mutable valuesIndex +
+  // parallel wheresValues hand-threading (the off-by-one source).
+  const pb = new ParamBuilder(initialValuesIndex);
 
   switch (hidden) {
     case 'exclude':
@@ -120,24 +123,21 @@ export const getWheresFromOptions = (
     wheres.push('exclude_from_feeds IS NOT TRUE');
   }
   if (takenBefore) {
-    wheres.push(`taken_at < $${valuesIndex++}`);
-    wheresValues.push(takenBefore.toISOString());
+    wheres.push(`taken_at < ${pb.add(takenBefore.toISOString())}`);
   }
   if (takenAfterInclusive) {
-    wheres.push(`taken_at >= $${valuesIndex++}`);
-    wheresValues.push(takenAfterInclusive.toISOString());
+    wheres.push(`taken_at >= ${pb.add(takenAfterInclusive.toISOString())}`);
   }
   if (updatedBefore) {
-    wheres.push(`updated_at < $${valuesIndex++}`);
-    wheresValues.push(updatedBefore.toISOString());
+    wheres.push(`updated_at < ${pb.add(updatedBefore.toISOString())}`);
   }
   if (query) {
-    wheres.push(`${PHOTO_SEARCH_EXPRESSION} ILIKE $${valuesIndex++}`);
-    wheresValues.push(`%${query.toLocaleLowerCase()}%`);
+    wheres.push(
+      `${PHOTO_SEARCH_EXPRESSION} ILIKE ${pb.add(`%${query.toLocaleLowerCase()}%`)}`,
+    );
   }
   if (maximumAspectRatio) {
-    wheres.push(`aspect_ratio <= $${valuesIndex++}`);
-    wheresValues.push(maximumAspectRatio);
+    wheres.push(`aspect_ratio <= ${pb.add(maximumAspectRatio)}`);
   }
   if (recent) {
     // Newest upload must be within past 2 weeks
@@ -148,60 +148,49 @@ export const getWheresFromOptions = (
     wheres.push('created_at >= (SELECT MAX(created_at) - INTERVAL \'7 days\' FROM photos)');
   }
   if (year) {
-    wheres.push(`EXTRACT(YEAR FROM taken_at) = $${valuesIndex++}`);
-    wheresValues.push(year);
+    wheres.push(`EXTRACT(YEAR FROM taken_at) = ${pb.add(year)}`);
   }
   if (camera?.make) {
-    wheres.push(`${parameterizeForDb('make')}=$${valuesIndex++}`);
-    wheresValues.push(parameterize(camera.make));
+    wheres.push(`${parameterizeForDb('make')}=${pb.add(parameterize(camera.make))}`);
   }
   if (camera?.model) {
-    wheres.push(`${parameterizeForDb('model')}=$${valuesIndex++}`);
-    wheresValues.push(parameterize(camera.model));
+    wheres.push(`${parameterizeForDb('model')}=${pb.add(parameterize(camera.model))}`);
   }
   if (lens?.make) {
-    wheres.push(`${parameterizeForDb('lens_make')}=$${valuesIndex++}`);
-    wheresValues.push(parameterize(lens.make));
+    wheres.push(`${parameterizeForDb('lens_make')}=${pb.add(parameterize(lens.make))}`);
   }
   if (lens?.model) {
-    wheres.push(`${parameterizeForDb('lens_model')}=$${valuesIndex++}`);
+    wheres.push(`${parameterizeForDb('lens_model')}=${pb.add(parameterize(lens.model))}`);
     // Ensure unique queries for lenses missing makes
     if (!lens.make) { wheres.push('lens_make IS NULL'); }
-    wheresValues.push(parameterize(lens.model));
   }
   if (album) {
-    wheres.push(`album_id=$${valuesIndex++}`);
-    wheresValues.push(album.id);
+    wheres.push(`album_id=${pb.add(album.id)}`);
   }
   if (tag) {
     // `tags @> ARRAY[$n]` (containment) is GIN-indexable via array_ops;
     // the equivalent `$n = ANY(tags)` is NOT and would seq-scan (PLOG-4 N1).
-    wheres.push(`tags @> ARRAY[$${valuesIndex++}]::varchar[]`);
-    wheresValues.push(tag);
+    wheres.push(`tags @> ARRAY[${pb.add(tag)}]::varchar[]`);
   }
   if (film) {
-    wheres.push(`film=$${valuesIndex++}`);
-    wheresValues.push(film);
+    wheres.push(`film=${pb.add(film)}`);
   }
   if (recipe) {
-    wheres.push(`recipe_title=$${valuesIndex++}`);
-    wheresValues.push(recipe);
+    wheres.push(`recipe_title=${pb.add(recipe)}`);
   }
   if (focal) {
-    wheres.push(`focal_length=$${valuesIndex++}`);
-    wheresValues.push(focal);
+    wheres.push(`focal_length=${pb.add(focal)}`);
   }
   if (photoIds && photoIds.length > 0) {
-    wheres.push(`id=ANY($${valuesIndex++})`);
-    wheresValues.push(convertArrayToPostgresString(photoIds) ?? '');
+    wheres.push(`id=ANY(${pb.add(convertArrayToPostgresString(photoIds) ?? '')})`);
   }
 
   return {
     wheres: wheres.length > 0
       ? `WHERE ${wheres.join(' AND ')}`
       : '',
-    wheresValues,
-    lastValuesIndex: valuesIndex,
+    wheresValues: pb.values,
+    lastValuesIndex: pb.nextIndex,
   };
 };
 
