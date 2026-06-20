@@ -37,6 +37,13 @@ const DENY = new Set(GENERIC_TAG_DENY_LIST.map(t => t.toLowerCase()));
 // model can't overflow the column and abort the insert.
 const TAG_MAX_LENGTH = 255;
 
+// A tag must contain at least one letter or number (Unicode-aware, so CJK
+// counts). Drops punctuation-only junk like "." or "-" that the model very
+// occasionally emits — a "." tag otherwise breaks the /tag/[tag] route at build.
+const HAS_ALPHANUMERIC = /[\p{L}\p{N}]/u;
+const isValidTag = (tag: string) =>
+  Boolean(tag) && tag.length <= TAG_MAX_LENGTH && HAS_ALPHANUMERIC.test(tag);
+
 const normalizeTag = (tag: string): string =>
   parameterize(tag).toLowerCase();
 
@@ -50,10 +57,7 @@ export const normalizeTags = (
 
   const add = (value: string) => {
     const norm = normalizeTag(value);
-    // length guard: tags are VARCHAR(255); the model can occasionally emit a
-    // whole phrase as a "tag" — drop it rather than overflow the column.
-    if (!norm || norm.length > TAG_MAX_LENGTH || DENY.has(norm) ||
-      seen.has(norm)) { return; }
+    if (!isValidTag(norm) || DENY.has(norm) || seen.has(norm)) { return; }
     if (result.length >= AI_TAGS_MAX) { return; }
     seen.add(norm);
     result.push(norm);
@@ -85,8 +89,7 @@ export const normalizeTagPairs = (
 
   const add = (value: string, zhLabel?: string) => {
     const norm = normalizeTag(value);
-    if (!norm || norm.length > TAG_MAX_LENGTH || DENY.has(norm) ||
-      seen.has(norm)) { return; }
+    if (!isValidTag(norm) || DENY.has(norm) || seen.has(norm)) { return; }
     if (tags.length >= AI_TAGS_MAX) { return; }
     seen.add(norm);
     tags.push(norm);

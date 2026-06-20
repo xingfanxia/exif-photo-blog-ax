@@ -22,6 +22,9 @@ describe('normalizeAiResult / normalizeTags (PLOG-9 code-enforced invariants)', 
   it('soft-merges existing tags without duplicating', () => {
     expect(normalizeTags('fog', ['fog', 'pier'])).toEqual(['fog', 'pier']);
   });
+  it('drops punctuation-only tags (e.g. ".") that would break routing', () => {
+    expect(normalizeTags('cat, ., fog, -')).toEqual(['cat', 'fog']);
+  });
   it('strips markdown/quotes/trailing-period from text fields', () => {
     expect(normalizeAiResult({ title: '"**Hello**"', caption: 'A caption.' }))
       .toEqual({ title: 'Hello', caption: 'A caption' });
