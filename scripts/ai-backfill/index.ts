@@ -23,9 +23,9 @@ import { computeInputHash, shouldSkipBackfill } from '@/photo/ai/backfill';
 import { generateAiImageQueries } from '@/photo/ai/server';
 import { getAiTextFieldsToGenerate } from '@/photo/ai';
 import { getImageBase64FromUrl } from '@/photo/server';
-import { getOptimizedPhotoUrlForManipulation } from '@/photo/storage';
+import { getOptimizedPhotoUrlForSuffix } from '@/photo/storage';
 import { getUniqueTags } from '@/photo/query';
-import { AI_TEXT_AUTO_GENERATED_FIELDS, IS_PREVIEW } from '@/app/config';
+import { AI_TEXT_AUTO_GENERATED_FIELDS } from '@/app/config';
 
 // PLOG-15: bumped from 'v1' (free-form tags) → faceted controlled vocabulary.
 // The version is hashed into input_hash, so the bump re-tags every photo on the
@@ -65,8 +65,12 @@ const backfillPhoto = async (
   uniqueTags: Awaited<ReturnType<typeof getUniqueTags>>,
 ): Promise<'skipped' | 'done' | 'failed'> => {
   try {
+    // PLOG-15: fetch the pre-generated R2 `md` (640px) variant DIRECTLY. This
+    // worker runs OUTSIDE Next, so the old next/image (`/_next/image?...`) URL
+    // depended on a running optimizer (broken with the PLOG-6 custom loader →
+    // sharp choked on the optimizer's XML error). 640px is ample for vision.
     const imageBase64 = await getImageBase64FromUrl(
-      getOptimizedPhotoUrlForManipulation(row.url, IS_PREVIEW),
+      getOptimizedPhotoUrlForSuffix(row.url, 'md'),
     );
     if (!imageBase64) { throw new Error('Could not load image'); }
 
