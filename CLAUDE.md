@@ -36,10 +36,9 @@ git checkout ax/overhaul && git rebase main
 
 ### Expected hot-file divergences
 
-- `next.config.ts` — currently **byte-identical**; PLOG-6 adds the custom
-  Cloudflare image loader (`images.loader:'custom'` + `loaderFile`) and
-  `imageSizes`. That is the one unavoidable next.config divergence; log it in
-  `UPSTREAM.md` when it lands.
+- `next.config.ts` — **diverged in PLOG-6**: custom Cloudflare image loader
+  (`images.loader:'custom'` + `loaderFile` + `imageSizes` from the shared
+  module). The one unavoidable next.config divergence; logged in `UPSTREAM.md`.
 - `jest.config.ts`, `package.json`, `src/platforms/redis.ts` — diverged in
   PLOG-1 (honest test signal). See `UPSTREAM.md`.
 - `vercel.json` — AX-only addition (region pin `hnd1`, Tokyo; co-located with
