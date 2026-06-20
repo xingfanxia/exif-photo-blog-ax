@@ -10,7 +10,7 @@ import ImageMedium from '@/components/image/ImageMedium';
 import { clsx } from 'clsx/lite';
 import { pathForPhoto } from '@/app/path';
 import { SHOULD_PREFETCH_ALL_LINKS } from '@/app/config';
-import { useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import useVisibility from '@/utility/useVisibility';
 import LinkWithStatus from '@/components/LinkWithStatus';
 import Spinner from '@/components/Spinner';
@@ -36,7 +36,16 @@ export default function PhotoMedium({
 } & PhotoSetCategory) {
   const ref = useRef<HTMLAnchorElement>(null);
 
-  useVisibility({ ref, onVisible });
+  // PLOG-7: prefetch in-viewport cards (drive off the existing visibility
+  // observer) so a card click stops being a cold navigation, instead of the
+  // global SHOULD_PREFETCH_ALL_LINKS (off) prefetching nothing.
+  const [isVisible, setIsVisible] = useState(false);
+  const handleVisible = useCallback(() => {
+    setIsVisible(true);
+    onVisible?.();
+  }, [onVisible]);
+
+  useVisibility({ ref, onVisible: handleVisible });
 
   return (
     <LinkWithStatus
@@ -48,7 +57,7 @@ export default function PhotoMedium({
         selected && 'brightness-50',
         className,
       )}
-      prefetch={prefetch}
+      prefetch={prefetch || isVisible}
     >
       {({ isLoading }) =>
         <div className="w-full h-full">

@@ -5,8 +5,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "jest --watch --transformIgnorePatterns 'node_modules/(?!my-library-dir)/'",
-    "analyze": "ANALYZE=true next build --webpack"
+    "test": "jest --watch",
+    "test:ci": "jest --ci",
+    "db:migrate": "TS_NODE_PROJECT=tsconfig.scripts.json node --env-file=.env.local -r ts-node/register -r tsconfig-paths/register scripts/db/migrate.ts",
+    "analyze": "ANALYZE=true next build --webpack",
+    "ai:backfill": "TS_NODE_PROJECT=tsconfig.scripts.json node --env-file=.env.local -r ts-node/register -r tsconfig-paths/register scripts/ai-backfill/index.ts",
+    "batch:upload": "TS_NODE_PROJECT=tsconfig.scripts.json node --env-file=.env.local -r ts-node/register -r tsconfig-paths/register scripts/batch-upload/index.ts",
+    "backfill:color": "TS_NODE_PROJECT=tsconfig.scripts.json node --env-file=.env.local -r ts-node/register -r tsconfig-paths/register scripts/backfill-color/index.ts"
   },
   "packageManager": "pnpm@11.0.9",
   "dependencies": {
@@ -80,6 +85,7 @@
     "postcss": "8.5.14",
     "tailwindcss": "4.3.0",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "6.0.3"
   },
   "pnpm": {

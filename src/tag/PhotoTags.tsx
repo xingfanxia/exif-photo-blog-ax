@@ -7,11 +7,14 @@ import { Fragment } from 'react';
 export default function PhotoTags({
   tags,
   tagCounts = {},
+  tagLabels = {},
   contrast,
   prefetch,
 }: {
   tags: string[]
   tagCounts?: Record<string, number>
+  // FORK: optional slug→display-label map (e.g. localized zh labels).
+  tagLabels?: Record<string, string>
 } & EntityLinkExternalProps) {
   return (
     <div className="flex flex-col">
@@ -25,6 +28,7 @@ export default function PhotoTags({
             }} />
             : <PhotoTag {...{
               tag,
+              displayLabel: tagLabels[tag],
               contrast,
               prefetch, hoverCount: tagCounts[tag] }} />}
         </Fragment>)}

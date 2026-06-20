@@ -1,12 +1,37 @@
-import { migrationForError } from './migration';
-import { createPhotosTable } from '@/photo/query';
 import sleep from '@/utility/sleep';
 import { ADMIN_SQL_DEBUG_ENABLED } from '@/app/config';
-import { createAlbumPhotoTable, createAlbumsTable } from '@/album/query';
-import { createAboutTable } from '@/about/query';
 
-// Safe wrapper intended for most queries with JIT migration/table creation
-// Catches up to 3 migrations in older installations
+// PLOG-13: encapsulates the `$N` parameter sequence so query assembly stops
+// hand-threading a mutable `valuesIndex` alongside a parallel values array
+// (the off-by-one source). `pb.add(value)` records the value AND returns its
+// placeholder in one call; `values`/`nextIndex` expose the accumulated state.
+export class ParamBuilder {
+  private readonly _values: (string | number)[] = [];
+
+  constructor(private readonly startIndex = 1) {}
+
+  // Record a bound value and return its `$N` placeholder.
+  add(value: string | number): string {
+    this._values.push(value);
+    return `$${this.startIndex + this._values.length - 1}`;
+  }
+
+  get values(): (string | number)[] {
+    return this._values;
+  }
+
+  // The next index a caller would use (== the old `lastValuesIndex`).
+  get nextIndex(): number {
+    return this.startIndex + this._values.length;
+  }
+}
+
+// Safe wrapper for queries. Table creation and schema migrations are applied
+// EXPLICITLY by the ordered runner (`@/db/migrate` → `runMigrations`), NOT as
+// a side-effect of a failed read (PLOG-3 removed the JIT-DDL-from-error path
+// and its 3-deep nested migration catch). This wrapper now only:
+//  - retries once on the transient Neon/Supabase "endpoint is in transition";
+//  - logs with context and re-throws everything else (errors stay loud).
 export const safelyQuery = async <T>(
   callback: () => Promise<T>,
   queryLabel: string,
@@ -19,56 +44,7 @@ export const safelyQuery = async <T>(
   try {
     result = await callback();
   } catch (e: any) {
-    // Catch 1st migration
-    let migration = migrationForError(e);
-    if (migration) {
-      console.log(`Running Migration ${migration.label} ...`);
-      await migration.run();
-      try {
-        result = await callback();
-      } catch (e: any) {
-        // Catch 2nd migration
-        migration = migrationForError(e);
-        if (migration) {
-          console.log(`Running Migration ${migration.label} ...`);
-          await migration.run();
-          result = await callback();
-        } else {
-          try {
-            result = await callback();
-          } catch (e: any) {
-            // Catch 3rd migration
-            migration = migrationForError(e);
-            if (migration) {
-              console.log(`Running Migration ${migration.label} ...`);
-              await migration.run();
-              result = await callback();
-            } else {
-              throw e;
-            }
-          }
-        }
-      }
-    } else if (/relation "photos" does not exist/i.test(e.message)) {
-      // Create all tables if 'photos' doesn't exist
-      console.log('Creating all tables ...');
-      await createPhotosTable();
-      await createAlbumsTable();
-      await createAlbumPhotoTable();
-      await createAboutTable();
-      result = await callback();
-    } else if (/relation "albums" does not exist/i.test(e.message)) {
-      // Create albums tables if they don't exist
-      console.log('Creating albums tables ...');
-      await createAlbumsTable();
-      await createAlbumPhotoTable();
-      result = await callback();
-    } else if (/relation "about" does not exist/i.test(e.message)) {
-      // Create about table if it doesn't exist
-      console.log('Creating about table ...');
-      await createAboutTable();
-      result = await callback();
-    } else if (/endpoint is in transition/i.test(e.message)) {
+    if (/endpoint is in transition/i.test(e.message)) {
       console.log(
         'SQL query error: endpoint is in transition (setting timeout)',
       );

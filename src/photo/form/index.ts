@@ -15,6 +15,21 @@ import { ReactNode } from 'react';
 import { FujifilmSimulation } from '@/platforms/fujifilm/simulation';
 import { SelectMenuOptionType } from '@/components/SelectMenuOption';
 import { COLOR_SORT_ENABLED } from '@/app/config';
+import { z } from 'zod';
+
+// PLOG-12: NaN-safe numeric coercion for form fields. `parseInt('abc')` /
+// `parseFloat('')` silently yield NaN, which then flows into the DB; a
+// finite-checked z.coerce returns undefined instead of poisoning the insert.
+const FiniteNumber = z.coerce.number().finite();
+export const parseFormNumber = (value?: string): number | undefined => {
+  if (value === undefined || value === '') { return undefined; }
+  const result = FiniteNumber.safeParse(value);
+  return result.success ? result.data : undefined;
+};
+export const parseFormInt = (value?: string): number | undefined => {
+  const n = parseFormNumber(value);
+  return n === undefined ? undefined : Math.trunc(n);
+};
 
 type VirtualFields =
   'albums' |
@@ -108,6 +123,33 @@ const FORM_METADATA = (
     type: 'textarea',
     label: 'semantic description (not visible)',
     capitalize: true,
+    validateStringMaxLength: STRING_MAX_LENGTH_LONG,
+    shouldHide: () => !aiTextGeneration,
+  },
+  // FORK: bilingual (Simplified-Chinese) AI siblings. AI auto-fills these; shown
+  // in the edit form when present so the zh output is reviewable. No capitalize
+  // (meaningless for CJK); hidden when empty so manual uploads aren't cluttered.
+  titleZh: {
+    section: 'text',
+    label: 'title (中文)',
+    validateStringMaxLength: STRING_MAX_LENGTH_SHORT,
+    hideIfEmpty: true,
+  },
+  captionZh: {
+    section: 'text',
+    label: 'caption (中文)',
+    validateStringMaxLength: STRING_MAX_LENGTH_LONG,
+    hideIfEmpty: true,
+  },
+  tagsZh: {
+    section: 'text',
+    label: 'tags (中文)',
+    hideIfEmpty: true,
+  },
+  semanticDescriptionZh: {
+    section: 'text',
+    type: 'textarea',
+    label: 'semantic description 中文 (not visible)',
     validateStringMaxLength: STRING_MAX_LENGTH_LONG,
     shouldHide: () => !aiTextGeneration,
   },
@@ -365,6 +407,8 @@ export const convertPhotoToFormData = (photo: Photo): PhotoFormData => {
         return (value ?? [])
           .filter((tag: string) => tag !== TAG_FAVS)
           .join(', ');
+      case 'tagsZh':
+        return (value ?? []).join(', ');
       case 'takenAt':
         return value?.toISOString ? value.toISOString() : value;
       case 'hidden':
@@ -401,6 +445,9 @@ export const convertFormDataToPhotoDbInsert = (
   if (photoForm.favorite === 'true') {
     tags.push(TAG_FAVS);
   }
+  // FORK: zh tags are DISPLAY labels — do NOT parameterize (preserve CJK
+  // exactly); they stay index-aligned to the canonical en tags.
+  const tagsZh = convertStringToArray(photoForm.tagsZh, false);
 
   // Parse FormData:
   // - remove server action ID
@@ -428,49 +475,26 @@ export const convertFormDataToPhotoDbInsert = (
     ...!photoForm.id && { id: generateNanoid() },
     // Delete array field when empty
     tags: tags.length > 0 ? tags : undefined,
+    tagsZh: tagsZh.length > 0 ? tagsZh : undefined,
     ...photoForm.recipeTitle && {
       recipeTitle: parameterize(photoForm.recipeTitle),
     },
-    width: photoForm.width
-      ? parseInt(photoForm.width)
-      : undefined,
-    height: photoForm.height
-      ? parseInt(photoForm.height)
-      : undefined,
-    // Convert form strings to numbers
-    aspectRatio: photoForm.aspectRatio
-      ? roundToNumber(parseFloat(photoForm.aspectRatio), 6)
+    width: parseFormInt(photoForm.width),
+    height: parseFormInt(photoForm.height),
+    // Convert form strings to numbers (NaN-safe)
+    aspectRatio: parseFormNumber(photoForm.aspectRatio) !== undefined
+      ? roundToNumber(parseFormNumber(photoForm.aspectRatio)!, 6)
       : DEFAULT_ASPECT_RATIO,
-    focalLength: photoForm.focalLength
-      ? parseInt(photoForm.focalLength)
-      : undefined,
-    focalLengthIn35MmFormat: photoForm.focalLengthIn35MmFormat
-      ? parseInt(photoForm.focalLengthIn35MmFormat)
-      : undefined,
-    fNumber: photoForm.fNumber
-      ? parseFloat(photoForm.fNumber)
-      : undefined,
-    latitude: photoForm.latitude
-      ? parseFloat(photoForm.latitude)
-      : undefined,
-    longitude: photoForm.longitude
-      ? parseFloat(photoForm.longitude)
-      : undefined,
-    iso: photoForm.iso
-      ? parseInt(photoForm.iso)
-      : undefined,
-    exposureTime: photoForm.exposureTime
-      ? parseFloat(photoForm.exposureTime)
-      : undefined,
-    exposureCompensation: photoForm.exposureCompensation
-      ? parseFloat(photoForm.exposureCompensation)
-      : undefined,
-    colorSort: photoForm.colorSort
-      ? parseInt(photoForm.colorSort)
-      : undefined,
-    priorityOrder: photoForm.priorityOrder
-      ? parseFloat(photoForm.priorityOrder)
-      : undefined,
+    focalLength: parseFormInt(photoForm.focalLength),
+    focalLengthIn35MmFormat: parseFormInt(photoForm.focalLengthIn35MmFormat),
+    fNumber: parseFormNumber(photoForm.fNumber),
+    latitude: parseFormNumber(photoForm.latitude),
+    longitude: parseFormNumber(photoForm.longitude),
+    iso: parseFormInt(photoForm.iso),
+    exposureTime: parseFormNumber(photoForm.exposureTime),
+    exposureCompensation: parseFormNumber(photoForm.exposureCompensation),
+    colorSort: parseFormInt(photoForm.colorSort),
+    priorityOrder: parseFormNumber(photoForm.priorityOrder),
     excludeFromFeeds: photoForm.excludeFromFeeds === 'true',
     hidden: photoForm.hidden === 'true',
     ...generateTakenAtFields(photoForm),

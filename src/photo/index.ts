@@ -7,6 +7,7 @@ import {
   SHOW_RECIPES,
 } from '@/app/config';
 import { ABSOLUTE_PATH_HOME_IMAGE } from '@/app/path';
+import { ContentLanguage, localizedText } from '@/app/content-language';
 import { formatDate, formatDateFromPostgresString } from '@/utility/date';
 import {
   formatAperture,
@@ -16,6 +17,7 @@ import {
 } from '@/utility/exif-format';
 import { capitalize, parameterize } from '@/utility/string';
 import camelcaseKeys from 'camelcase-keys';
+import { z } from 'zod';
 import { isBefore } from 'date-fns';
 import type { Metadata } from 'next';
 import { FujifilmRecipe } from '@/platforms/fujifilm/recipe';
@@ -84,6 +86,11 @@ export interface PhotoDbInsert extends PhotoExif {
   caption?: string
   semanticDescription?: string
   tags?: string[]
+  // FORK: bilingual (Simplified-Chinese) siblings of the AI text fields.
+  titleZh?: string
+  captionZh?: string
+  semanticDescriptionZh?: string
+  tagsZh?: string[]
   recipeTitle?: string
   locationName?: string
   colorData?: string
@@ -97,12 +104,36 @@ export interface PhotoDbInsert extends PhotoExif {
 
 // Raw db response
 export interface PhotoDb extends
-  Omit<PhotoDbInsert, 'takenAt' | 'tags'> {
+  Omit<PhotoDbInsert, 'takenAt' | 'tags' | 'tagsZh'> {
   updatedAt: Date
   createdAt: Date
   takenAt: Date
   tags: string[] | null
+  tagsZh: string[] | null
 }
+
+// Runtime-validated DB→domain boundary (PLOG-11). Replaces the silently-
+// unsound `as unknown as PhotoDb` cast: a renamed/missing column or a malformed
+// JSONB value now throws a loud, field-named ZodError instead of yielding a
+// wrong object. Permissive by design (`looseObject` passes through unmodeled
+// columns) so it can't reject valid rows — it asserts only the invariants that
+// matter (required identity columns, tag-array shape, JSONB value shape).
+const jsonbField = z.union([
+  z.string(), // legacy escaped-JSON string
+  z.record(z.string(), z.unknown()), // pg-parsed JSONB object
+  z.array(z.unknown()), // pg-parsed JSONB array
+  z.null(),
+]).optional();
+
+export const PhotoRowSchema = z.looseObject({
+  id: z.string(),
+  url: z.string(),
+  extension: z.string(),
+  tags: z.array(z.string()).nullable().optional(),
+  tagsZh: z.array(z.string()).nullable().optional(),
+  recipeData: jsonbField,
+  colorData: jsonbField,
+});
 
 // Parsed db response
 export interface Photo extends Omit<PhotoDb, 'recipeData' | 'colorData'> {
@@ -114,18 +145,25 @@ export interface Photo extends Omit<PhotoDb, 'recipeData' | 'colorData'> {
   exposureCompensationFormatted?: string
   takenAtNaiveFormatted: string
   tags: string[]
+  tagsZh: string[]
   recipeData?: FujifilmRecipe
   colorData?: PhotoColorData
   updateStatus?: PhotoUpdateStatus
 }
 
 export const parsePhotoFromDb = (photoDbRaw: PhotoDb): Photo => {
-  const photoDb = camelcaseKeys(
-    photoDbRaw as unknown as Record<string, unknown>,
+  // Validate at the boundary (throws loudly on a renamed column / malformed
+  // JSONB) instead of the old silently-unsound cast. The trailing cast is a
+  // pure TS bridge — `looseObject`'s inferred type carries an index signature
+  // rather than PhotoDb's exact optionals — NOT a soundness escape: the shape
+  // has already been checked by `.parse()`.
+  const photoDb = PhotoRowSchema.parse(
+    camelcaseKeys(photoDbRaw as unknown as Record<string, unknown>),
   ) as unknown as PhotoDb;
   return {
     ...photoDb,
     tags: photoDb.tags ?? [],
+    tagsZh: photoDb.tagsZh ?? [],
     focalLengthFormatted:
       photoDb.focalLength
         ? formatFocalLength(photoDb.focalLength)
@@ -179,10 +217,18 @@ export const convertPhotoToPhotoDbInsert = (
 export const descriptionForPhoto = (
   photo: Photo,
   includeSemanticDescription?: boolean,
+  lang?: ContentLanguage,
 ) =>
-  photo.caption ||
-  (includeSemanticDescription && photo.semanticDescription) ||
+  localizedText(lang, photo.caption, photo.captionZh) ||
+  (includeSemanticDescription &&
+    localizedText(lang, photo.semanticDescription, photo.semanticDescriptionZh))
+  ||
   formatDate({ date: photo.takenAt }).toLocaleUpperCase();
+
+// FORK: localized caption (the one public bypass — PhotoLarge renders the raw
+// caption, not via descriptionForPhoto).
+export const captionForPhoto = (photo: Photo, lang?: ContentLanguage) =>
+  localizedText(lang, photo.caption, photo.captionZh);
 
 export const getPreviousPhoto = (photo: Photo, photos: Photo[]) => {
   const index = photos.findIndex(p => p.id === photo.id);
@@ -226,9 +272,11 @@ export const titleForPhoto = (
   photo: Photo,
   useDateAsTitle = true,
   fallback = 'Untitled',
+  lang?: ContentLanguage,
 ) => {
-  if (photo.title) {
-    return photo.title;
+  const title = localizedText(lang, photo.title, photo.titleZh);
+  if (title) {
+    return title;
   } else if (useDateAsTitle && (photo.takenAt || photo.createdAt)) {
     return formatDate({
       date: photo.takenAt || photo.createdAt,
@@ -239,8 +287,9 @@ export const titleForPhoto = (
   }
 };
 
-export const altTextForPhoto = (photo: Photo) =>
-  photo.semanticDescription || titleForPhoto(photo);
+export const altTextForPhoto = (photo: Photo, lang?: ContentLanguage) =>
+  localizedText(lang, photo.semanticDescription, photo.semanticDescriptionZh) ||
+  titleForPhoto(photo, true, undefined, lang);
 
 export const photoLabelForCount = (
   count: number,

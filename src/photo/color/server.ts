@@ -1,16 +1,11 @@
 import { convertRgbToOklab, parseHex } from 'culori';
-import {
-  AI_CONTENT_GENERATION_ENABLED,
-  IS_PREVIEW,
-} from '@/app/config';
+import { AI_CONTENT_GENERATION_ENABLED } from '@/app/config';
 import { FastAverageColor } from 'fast-average-color';
 import { Oklch, PhotoColorData } from './client';
 import sharp from 'sharp';
 import { extractColors } from 'extract-colors';
-import { getImageBase64FromUrl } from '../server';
-import { generateOpenAiImageQuery } from '@/platforms/openai';
+import { generateOpenAiImageQuery } from '@/platforms/ai';
 import { calculateColorSort } from './sort';
-import { getOptimizedPhotoUrlForManipulation } from '../storage';
 
 const NULL_RGB = { r: 0, g: 0, b: 0 };
 
@@ -27,12 +22,20 @@ export const convertHexToOklch = (hex: string): Oklch => {
   };
 };
 
+// FORK: resize images for color analysis to a bounded edge — replaces the
+// previous reliance on the Next /_next/image optimizer (which is coupled to a
+// running server and fails from a standalone script / batch worker).
+const COLOR_ANALYSIS_EDGE = 640;
+const fetchResizedBuffer = async (url: string) => {
+  const imageBuffer = await fetch(url).then(res => res.arrayBuffer());
+  return sharp(imageBuffer).resize(COLOR_ANALYSIS_EDGE, COLOR_ANALYSIS_EDGE,
+    { fit: 'inside', withoutEnlargement: true });
+};
+
 // Convert image url to byte array
-const getImageDataFromUrl = async (_url: string) => {
-  const url = getOptimizedPhotoUrlForManipulation(_url, IS_PREVIEW);
-  const imageBuffer = await fetch(decodeURIComponent(url))
-    .then(res => res.arrayBuffer());
-  const image = sharp(imageBuffer);
+const getImageDataFromUrl = async (url: string) => {
+  // Re-wrap the resized output so metadata reflects the post-resize dimensions.
+  const image = sharp(await (await fetchResizedBuffer(url)).toBuffer());
   const { width, height } = await image.metadata();
   const buffer = await image.ensureAlpha().raw().toBuffer();
   return {
@@ -118,19 +121,27 @@ export const getColorFieldsForPhotoForm = async (
 };
 
 export const getColorFromAI = async (
-  _url: string,
-  isBatch?: boolean,
+  url: string,
+  _isBatch?: boolean,
 ) => {
-  const url = getOptimizedPhotoUrlForManipulation(_url, IS_PREVIEW);
-  const image = await getImageBase64FromUrl(url);
-  const hexColor = await generateOpenAiImageQuery(image, `
-    Does this image have a primary subject color?
-    If yes, what is the approximate hex color of the subject.
-    If not, what is the approximate hex color of the background?
-    Respond only with a hex color value:
-  `, isBatch);
-  const hex = hexColor?.match(/#*([a-f0-9]{6})/i)?.[1];
-  if (hex) {
-    return convertHexToOklch(`#${hex}`);
+  try {
+    const resized = await (await fetchResizedBuffer(url)).jpeg().toBuffer();
+    const image = `data:image/jpeg;base64,${resized.toString('base64')}`;
+    // NB: generateOpenAiImageQuery's 3rd arg is `model` (PLOG-9), not isBatch —
+    // omit it so the configured vision model is used.
+    const hexColor = await generateOpenAiImageQuery(image, `
+      Does this image have a primary subject color?
+      If yes, what is the approximate hex color of the subject.
+      If not, what is the approximate hex color of the background?
+      Respond only with a hex color value:
+    `);
+    const hex = hexColor?.match(/#*([a-f0-9]{6})/i)?.[1];
+    if (hex) {
+      return convertHexToOklch(`#${hex}`);
+    }
+  } catch {
+    // AI color is an enhancement — never let its failure kill the (non-AI)
+    // average/extracted color path that drives colorSort.
+    return undefined;
   }
 };

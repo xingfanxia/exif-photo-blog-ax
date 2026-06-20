@@ -5,9 +5,12 @@ import useAiImageQueries from '../ai/useAiImageQueries';
 export default function usePhotoFormParent({
   photoForm,
   imageThumbnailBase64,
+  getImageThumbnailBase64,
 }: {
   photoForm?: Partial<PhotoFormData>
+  // Upload: direct base64. Edit: lazy resolver (fetched on AI click). PLOG-5.
   imageThumbnailBase64?: string,
+  getImageThumbnailBase64?: () => Promise<string | undefined>,
 }) {
   const [pending, setIsPending] = useState(false);
   const [updatedTitle, setUpdatedTitle] = useState('');
@@ -21,7 +24,10 @@ export default function usePhotoFormParent({
       );
     }, []);
 
-  const aiContent = useAiImageQueries(imageThumbnailBase64);
+  const aiContent = useAiImageQueries(
+    imageThumbnailBase64,
+    getImageThumbnailBase64,
+  );
 
   return {
     pending,

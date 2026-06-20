@@ -47,7 +47,7 @@ export default function PhotoHeader({
   hasAiTextGeneration: boolean
   includeShareButton?: boolean
 } & PhotoSetCategory) {
-  const { isGridHighDensity } = useAppState();
+  const { isGridHighDensity, contentLanguage } = useAppState();
 
   const appText = useAppText();
 
@@ -97,7 +97,7 @@ export default function PhotoHeader({
           photo={selectedPhoto}
           className="uppercase font-bold truncate"
         >
-          {titleForPhoto(selectedPhoto, true)}
+          {titleForPhoto(selectedPhoto, true, undefined, contentLanguage)}
         </PhotoLink>);
 
   const renderBlock = (content: ReactNode) =>

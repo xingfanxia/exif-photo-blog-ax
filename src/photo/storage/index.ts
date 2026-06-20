@@ -18,8 +18,9 @@ const PREFIX_UPLOAD = 'upload';
 const EXTENSION_DEFAULT = 'jpg';
 const EXTENSION_OPTIMIZED = 'jpg';
 
-// For the time being, make compatible with `next/image` sizes
-const OPTIMIZED_FILE_SIZES = [{
+// For the time being, make compatible with `next/image` sizes.
+// Exported so the PLOG-6 image loader's variant table can be asserted in sync.
+export const OPTIMIZED_FILE_SIZES = [{
   suffix: 'sm',
   size: 200,
   quality: 90,

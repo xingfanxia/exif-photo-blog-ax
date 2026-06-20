@@ -116,15 +116,26 @@ export const MIGRATIONS: Migration[] = [{
     ALTER TABLE photos
     ALTER COLUMN iso TYPE INTEGER
   `),
+}, {
+  // PLOG-10: idempotency columns for the batch AI backfill worker.
+  label: '11: AI Backfill Idempotency',
+  fields: ['metadata_status', 'input_hash'],
+  run: () => sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS metadata_status TEXT,
+    ADD COLUMN IF NOT EXISTS input_hash TEXT
+  `,
+}, {
+  // FORK: bilingual (Simplified-Chinese) siblings of the AI text fields.
+  // Nullable → instant metadata-only ALTER, no backfill. Display falls back to
+  // the canonical English columns when a zh value is absent.
+  label: '12: Bilingual (zh) Text',
+  fields: ['title_zh', 'caption_zh', 'semantic_description_zh', 'tags_zh'],
+  run: () => sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS title_zh TEXT,
+    ADD COLUMN IF NOT EXISTS caption_zh TEXT,
+    ADD COLUMN IF NOT EXISTS semantic_description_zh TEXT,
+    ADD COLUMN IF NOT EXISTS tags_zh VARCHAR(255)[]
+  `,
 }];
-
-export const migrationForError = (e: any) =>
-  MIGRATIONS.find(({ fields, table = 'photos' }) =>
-    fields.some(field =>(
-      // eslint-disable-next-line max-len
-      new RegExp(`column "${field}" of relation "${table}" does not exist`, 'i').test(e.message) ||
-      new RegExp(`column "${field}" does not exist`, 'i').test(e.message) ||
-      // eslint-disable-next-line max-len
-      field === 'iso' && new RegExp('out of range for type smallint', 'i').test(e.message)
-    )),
-  );

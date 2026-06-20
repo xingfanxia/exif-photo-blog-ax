@@ -1,4 +1,5 @@
 import { removeUrlProtocol } from '@/utility/url';
+import { IMAGE_LOADER_SIZES } from '@/photo/imageLoader';
 import type { NextConfig } from 'next';
 import { RemotePattern } from 'next/dist/shared/lib/image-config';
 import path from 'path';
@@ -76,7 +77,13 @@ const IMAGE_QUALITY =
 
 const nextConfig: NextConfig = {
   images: {
-    imageSizes: [200],
+    // PLOG-6: custom loader serves pre-generated R2 variants directly,
+    // bypassing the /_next/image optimizer hop. imageSizes come from the
+    // single shared variant module (src/photo/imageLoader) so the widths Next
+    // requests line up with the stored sm/md/lg variants.
+    loader: 'custom',
+    loaderFile: './src/photo/imageLoader.ts',
+    imageSizes: IMAGE_LOADER_SIZES,
     qualities: [75, IMAGE_QUALITY],
     remotePatterns,
     minimumCacheTTL: 31536000,

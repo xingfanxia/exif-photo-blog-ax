@@ -3,6 +3,7 @@
 import {
   Photo,
   altTextForPhoto,
+  captionForPhoto,
   doesPhotoNeedBlurCompatibility,
   shouldShowCameraDataForPhoto,
   shouldShowExifDataForPhoto,
@@ -130,6 +131,7 @@ export default function PhotoLarge({
     arePhotosMatted,
     shouldDebugRecipeOverlays,
     isUserSignedIn,
+    contentLanguage,
   } = useAppState();
 
   const appText = useAppText();
@@ -157,6 +159,12 @@ export default function PhotoLarge({
   });
 
   const tags = sortTagsArray(photo.tags, primaryTag);
+  // FORK: localized (zh) tag display labels keyed by canonical slug — routing
+  // stays on the slug. Only when zh is active and the arrays are index-aligned.
+  const tagLabels = contentLanguage === 'zh' &&
+    photo.tagsZh.length === photo.tags.length
+    ? Object.fromEntries(photo.tags.map((t, i) => [t, photo.tagsZh[i]]))
+    : undefined;
 
   const camera = cameraFromPhoto(photo);
   const lens = lensFromPhoto(photo);
@@ -225,7 +233,7 @@ export default function PhotoLarge({
           className={clsx(arePhotosMatted && 'h-full')}
           classNameImage={clsx(arePhotosMatted &&
             'object-contain w-full h-full')}
-          alt={altTextForPhoto(photo)}
+          alt={altTextForPhoto(photo, contentLanguage)}
           src={photo.url}
           aspectRatio={photo.aspectRatio}
           blurDataURL={photo.blurData}
@@ -314,7 +322,7 @@ export default function PhotoLarge({
                 <div className="space-y-baseline">
                   {photo.caption &&
                     <div className="uppercase">
-                      {photo.caption}
+                      {captionForPhoto(photo, contentLanguage)}
                     </div>}
                   {(
                     showCameraContent ||
@@ -350,6 +358,7 @@ export default function PhotoLarge({
                       {showTagsContent &&
                         <PhotoTags
                           tags={tags}
+                          tagLabels={tagLabels}
                           contrast="medium"
                           prefetch={prefetchRelatedLinks}
                         />}

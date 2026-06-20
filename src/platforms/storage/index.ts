@@ -223,24 +223,36 @@ export const moveFile = async (
   return url;
 };
 
+// PLOG-14: keep annotate-and-continue (one dead backend mustn't abort the
+// multi-backend listing) but make the failure LOUD — the old `.catch(() => [])`
+// swallowed storage-list errors silently.
+const listOrLogEmpty = (
+  backend: StorageType,
+  promise: Promise<StorageListResponse>,
+): Promise<StorageListResponse> =>
+  promise.catch(e => {
+    console.error(
+      `Storage list failed (${backend}): ${e?.message ?? e}`,
+      { error: e },
+    );
+    return [];
+  });
+
 export const getStorageUrlsForPrefix = async (prefix = '') => {
   const urls: StorageListResponse = [];
 
   if (HAS_VERCEL_BLOB_STORAGE) {
-    urls.push(...await vercelBlobList(prefix)
-      .catch(() => []));
+    urls.push(...await listOrLogEmpty('vercel-blob', vercelBlobList(prefix)));
   }
   if (HAS_AWS_S3_STORAGE) {
-    urls.push(...await awsS3List(prefix)
-      .catch(() => []));
+    urls.push(...await listOrLogEmpty('aws-s3', awsS3List(prefix)));
   }
   if (HAS_CLOUDFLARE_R2_STORAGE) {
-    urls.push(...await cloudflareR2List(prefix)
-      .catch(() => []));
+    urls.push(
+      ...await listOrLogEmpty('cloudflare-r2', cloudflareR2List(prefix)));
   }
   if (HAS_MINIO_STORAGE) {
-    urls.push(...await minioList(prefix)
-      .catch(() => []));
+    urls.push(...await listOrLogEmpty('minio', minioList(prefix)));
   }
 
   return urls

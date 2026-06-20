@@ -2,14 +2,24 @@ import { POSTGRES_SSL_ENABLED } from '@/app/config';
 import { removeParamsFromUrl } from '@/utility/url';
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 
-const pool = new Pool({
+export const pool = new Pool({
   ...process.env.POSTGRES_URL && {
     connectionString: removeParamsFromUrl(
       process.env.POSTGRES_URL,
       ['sslmode'],
     ),
   },
-  ...POSTGRES_SSL_ENABLED && { ssl: true },
+  // Supabase's pooler presents a cert chain Node doesn't verify by default
+  // ("self-signed certificate in certificate chain" with bare `ssl: true`).
+  // The connection is still TLS-encrypted; we skip chain verification for the
+  // known Supabase host. (PLOG-8)
+  ...POSTGRES_SSL_ENABLED && { ssl: { rejectUnauthorized: false } },
+  // Keep the per-instance pool small: against Supabase's transaction pooler,
+  // node-pg's default max (10) × many warm Fluid-Compute instances can exhaust
+  // the pooler's connection budget under burst. (PLOG-8)
+  max: 3,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 10_000,
 });
 
 export type Primitive = string | number | boolean | undefined | null;
@@ -22,8 +32,6 @@ export const query = async <T extends QueryResultRow = any>(
   let response: QueryResult<T>;
   try {
     response = await client.query<T>(queryString, values);
-  } catch (error) {
-    throw error;
   } finally {
     client.release();
   }
@@ -56,4 +64,4 @@ const isTemplateStringsArray = (
 };
 
 export const testDatabaseConnection = async () =>
-  query('SELECt COUNT(*) FROM pg_stat_user_tables');
+  query('SELECT COUNT(*) FROM pg_stat_user_tables');

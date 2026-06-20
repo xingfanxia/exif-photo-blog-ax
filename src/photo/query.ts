@@ -36,7 +36,7 @@ import {
 import { Recipes } from '@/recipe';
 import { Years } from '@/year';
 import { PhotoColorData } from '@/photo/color/client';
-import { safelyQuery } from '@/db/query';
+import { safelyQuery, ParamBuilder } from '@/db/query';
 
 export const createPhotosTable = () =>
   sql`
@@ -92,9 +92,13 @@ export const insertPhoto = (photo: PhotoDbInsert) =>
       aspect_ratio,
       blur_data,
       title,
+      title_zh,
       caption,
+      caption_zh,
       semantic_description,
+      semantic_description_zh,
       tags,
+      tags_zh,
       make,
       model,
       focal_length,
@@ -127,9 +131,13 @@ export const insertPhoto = (photo: PhotoDbInsert) =>
       ${photo.aspectRatio},
       ${photo.blurData},
       ${photo.title},
+      ${photo.titleZh},
       ${photo.caption},
+      ${photo.captionZh},
       ${photo.semanticDescription},
+      ${photo.semanticDescriptionZh},
       ${convertArrayToPostgresString(photo.tags)},
+      ${convertArrayToPostgresString(photo.tagsZh)},
       ${photo.make},
       ${photo.model},
       ${photo.focalLength},
@@ -166,9 +174,13 @@ export const updatePhoto = (photo: PhotoDbInsert) =>
       aspect_ratio=${photo.aspectRatio},
       blur_data=${photo.blurData},
       title=${photo.title},
+      title_zh=${photo.titleZh},
       caption=${photo.caption},
+      caption_zh=${photo.captionZh},
       semantic_description=${photo.semanticDescription},
+      semantic_description_zh=${photo.semanticDescriptionZh},
       tags=${convertArrayToPostgresString(photo.tags)},
+      tags_zh=${convertArrayToPostgresString(photo.tagsZh)},
       make=${photo.make},
       model=${photo.model},
       focal_length=${photo.focalLength},
@@ -539,7 +551,11 @@ export const getPhotosNearId = async (
       lastValuesIndex,
     } = getWheresFromOptions(options);
 
-    let valuesIndex = lastValuesIndex;
+    // PLOG-13: continue the SAME $N sequence through one ParamBuilder instead
+    // of a second manual valuesIndex++ scheme alongside the wheres bindings.
+    const pb = new ParamBuilder(lastValuesIndex);
+    const idParam = pb.add(photoId);
+    const limitParam = pb.add(limit as number);
 
     return query(
       `
@@ -550,13 +566,13 @@ export const getPhotosNearId = async (
           ${joins ? `${joins}` : ''}
           ${wheres}
         ),
-        current AS (SELECT row_number FROM twi WHERE id = $${valuesIndex++})
+        current AS (SELECT row_number FROM twi WHERE id = ${idParam})
         SELECT twi.*
         FROM twi, current
         WHERE twi.row_number >= current.row_number - 1
-        LIMIT $${valuesIndex++}
+        LIMIT ${limitParam}
       `,
-      [...wheresValues, photoId, limit],
+      [...wheresValues, ...pb.values],
     )
       .then(({ rows }) => {
         const photo = rows.find(({ id }) => id === photoId);

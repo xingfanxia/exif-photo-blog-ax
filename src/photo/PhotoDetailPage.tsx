@@ -1,4 +1,5 @@
 import AnimateItems from '@/components/AnimateItems';
+import PhotoContentTitle from './PhotoContentTitle';
 import { Photo, PhotoDateRangePostgres } from '.';
 import { PhotoSetCategory } from '../category';
 import PhotoLarge from './PhotoLarge';
@@ -143,6 +144,7 @@ export default function PhotoDetailPage({
 
   return (
     <div>
+      <PhotoContentTitle photo={photo} />
       <AppGrid
         className="mt-1.5 mb-6"
         contentMain={customHeader ?? <PhotoHeader
