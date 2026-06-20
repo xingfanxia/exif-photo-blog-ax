@@ -1,33 +1,42 @@
 'use client';
 
-import Switcher from '@/components/switcher/Switcher';
-import SwitcherItem from '@/components/switcher/SwitcherItem';
+import { Fragment } from 'react';
+import { clsx } from 'clsx/lite';
 import { useAppState } from './AppState';
+import { ContentLanguage } from './content-language';
 
-// FORK: user-facing toggle for the language of PHOTO CONTENT (title/caption/
-// tags/semantic). Distinct from the theme + UI-locale switchers. Writes the
-// content-language cookie via AppState so server surfaces stay in sync.
+// FORK: language switcher for the whole site (UI chrome + photo content).
+// Styled as quiet plain text to match the site's existing "PREV / NEXT"
+// navigation vernacular — active language at full strength, the other dimmed,
+// a hairline slash between. No bordered box.
+const LANGUAGES: [ContentLanguage, string][] = [
+  ['en', 'EN'],
+  ['zh', '中'],
+];
+
 export default function ContentLanguageSwitcher() {
-  const {
-    contentLanguage,
-    setContentLanguage,
-    hasLoadedWithAnimations,
-  } = useAppState();
-
+  const { contentLanguage, setContentLanguage } = useAppState();
   return (
-    <Switcher className="translate-x-[-1px]">
-      <SwitcherItem
-        icon={<span className="text-[11px] font-medium tracking-wide">EN</span>}
-        onClick={() => setContentLanguage?.('en')}
-        active={hasLoadedWithAnimations && contentLanguage === 'en'}
-        tooltip={{ content: 'English' }}
-      />
-      <SwitcherItem
-        icon={<span className="text-[14px] leading-none">中</span>}
-        onClick={() => setContentLanguage?.('zh')}
-        active={hasLoadedWithAnimations && contentLanguage === 'zh'}
-        tooltip={{ content: '中文' }}
-      />
-    </Switcher>
+    <div className="flex items-center gap-1.5 select-none leading-none">
+      {LANGUAGES.map(([language, label], index) =>
+        <Fragment key={language}>
+          {index > 0 &&
+            <span aria-hidden className="text-dim opacity-50">/</span>}
+          <button
+            type="button"
+            aria-label={language === 'zh' ? '中文' : 'English'}
+            aria-pressed={contentLanguage === language}
+            onClick={() => setContentLanguage?.(language)}
+            className={clsx(
+              'cursor-pointer transition-colors duration-150',
+              contentLanguage === language
+                ? 'text-main'
+                : 'text-dim hover:text-medium',
+            )}
+          >
+            {label}
+          </button>
+        </Fragment>)}
+    </div>
   );
 }
