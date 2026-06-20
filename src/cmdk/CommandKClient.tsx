@@ -61,12 +61,12 @@ import {
   limitTagsByCount,
 } from '@/tag';
 import { formatCount, formatCountDescriptive } from '@/utility/string';
+import { zhForSlug } from '@/photo/ai/tagVocabulary';
 import CommandKItem from './CommandKItem';
 import {
   CATEGORY_VISIBILITY,
   COLOR_SORT_ENABLED,
   GRID_HOMEPAGE_ENABLED,
-  HIDE_TAGS_WITH_ONE_PHOTO,
   SHOW_ABOUT_PAGE,
 } from '@/app/config';
 import { DialogDescription, DialogTitle } from '@radix-ui/react-dialog';
@@ -111,6 +111,10 @@ const DIALOG_DESCRIPTION = 'For searching photos, views, and settings';
 const LISTENER_KEYDOWN = 'keydown';
 
 const MAX_HEIGHT = '20rem';
+
+// FORK: ⌘K tag list hides tags with fewer than this many photos (favs/private
+// and active-search matches are exempt — see limitTagsByCount).
+const CMDK_MIN_TAG_COUNT = 3;
 
 type CommandKItem = {
   label: ReactNode
@@ -301,8 +305,9 @@ export default function CommandKClient({
     } else {
       return [];
     }
-  },    
-  [photos],
+  },
+  // FORK: contentLanguage so photo titles re-translate on the EN/中 toggle.
+  [photos, contentLanguage],
   );
 
   useEffect(() => {
@@ -331,9 +336,11 @@ export default function CommandKClient({
     const tagsIncludingPrivate = photosCountHidden > 0
       ? addPrivateToTags(_tags, photosCountHidden)
       : _tags;
-    return HIDE_TAGS_WITH_ONE_PHOTO
-      ? limitTagsByCount(tagsIncludingPrivate, 2, queryFormatted)
-      : tagsIncludingPrivate;
+    // FORK: hide sparse tags (<3 photos) so the ⌘K list shows clustered facet
+    // tags, not subject singletons. Favs/private always show; a search query
+    // still surfaces a rare tag (queryToInclude in limitTagsByCount).
+    return limitTagsByCount(tagsIncludingPrivate, CMDK_MIN_TAG_COUNT,
+      queryFormatted);
   }, [_tags, photosCountHidden, queryFormatted]);
 
   const categorySections: CommandKSection[] = useMemo(() =>
@@ -400,7 +407,23 @@ export default function CommandKClient({
             items: tags.map(({ tag, count }) => ({
               explicitKey: formatTag(tag),
               label: <span className="flex items-center gap-[7px]">
-                {formatTag(tag)}
+                {/* FORK: zh label for facet tags (zhForSlug), en slug
+                    otherwise. Reserved favs/private keep their en form. */}
+                {contentLanguage === 'zh'
+                  && !isTagFavs(tag) && !isTagPrivate(tag)
+                  ? zhForSlug(tag) ?? formatTag(tag)
+                  : formatTag(tag)}
+                {/* FORK: inline per-tag count badge */}
+                <span
+                  className={clsx(
+                    'text-[11px] leading-none tabular-nums text-dim',
+                    'px-1.5 py-[3px] rounded-full',
+                    'bg-gray-100 dark:bg-gray-800/60',
+                  )}
+                  aria-label={formatCountDescriptive(count)}
+                >
+                  <span aria-hidden>{count}</span>
+                </span>
                 {isTagFavs(tag) &&
                   <IconFavs
                     size={13}
@@ -413,8 +436,6 @@ export default function CommandKClient({
                     className="text-dim translate-y-[-0.5px]"
                   />}
               </span>,
-              annotation: formatCount(count),
-              annotationAria: formatCountDescriptive(count),
               path: pathForTag(tag),
             })),
           };
@@ -465,6 +486,7 @@ export default function CommandKClient({
     recipes,
     films,
     focalLengths,
+    contentLanguage,
   ]);
 
   const clientSections: CommandKSection[] = [{
