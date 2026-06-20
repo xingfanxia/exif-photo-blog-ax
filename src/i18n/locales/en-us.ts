@@ -8,6 +8,7 @@ export const TEXT = {
     created: 'Created',
     updated: 'Updated',
     copied: 'Link to photo copied',
+    shareText: 'Check out this photo',
   },
   category: {
     camera: 'Camera',

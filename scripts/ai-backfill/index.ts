@@ -17,16 +17,20 @@
  * idempotency contract above is what makes either path safe to re-run.
  */
 import { pool, query } from '@/platforms/postgres';
+import { convertArrayToPostgresString } from '@/db';
 import { runMigrations } from '@/db/migrate';
 import { computeInputHash, shouldSkipBackfill } from '@/photo/ai/backfill';
 import { generateAiImageQueries } from '@/photo/ai/server';
 import { getAiTextFieldsToGenerate } from '@/photo/ai';
 import { getImageBase64FromUrl } from '@/photo/server';
-import { getOptimizedPhotoUrlForManipulation } from '@/photo/storage';
+import { getOptimizedPhotoUrlForSuffix } from '@/photo/storage';
 import { getUniqueTags } from '@/photo/query';
-import { AI_TEXT_AUTO_GENERATED_FIELDS, IS_PREVIEW } from '@/app/config';
+import { AI_TEXT_AUTO_GENERATED_FIELDS } from '@/app/config';
 
-const PROMPT_VERSION = process.env.AI_PROMPT_VERSION ?? 'v1';
+// PLOG-15: bumped from 'v1' (free-form tags) → faceted controlled vocabulary.
+// The version is hashed into input_hash, so the bump re-tags every photo on the
+// next run; a second run is still a no-op.
+const PROMPT_VERSION = process.env.AI_PROMPT_VERSION ?? 'v2-facets';
 const MODEL_ID =
   process.env.AI_MODEL ?? process.env.OPENAI_MODEL ?? 'unknown';
 const CONCURRENCY = Number(process.env.AI_BACKFILL_CONCURRENCY ?? 5);
@@ -61,8 +65,12 @@ const backfillPhoto = async (
   uniqueTags: Awaited<ReturnType<typeof getUniqueTags>>,
 ): Promise<'skipped' | 'done' | 'failed'> => {
   try {
+    // PLOG-15: fetch the pre-generated R2 `md` (640px) variant DIRECTLY. This
+    // worker runs OUTSIDE Next, so the old next/image (`/_next/image?...`) URL
+    // depended on a running optimizer (broken with the PLOG-6 custom loader →
+    // sharp choked on the optimizer's XML error). 640px is ample for vision.
     const imageBase64 = await getImageBase64FromUrl(
-      getOptimizedPhotoUrlForManipulation(row.url, IS_PREVIEW),
+      getOptimizedPhotoUrlForSuffix(row.url, 'md'),
     );
     if (!imageBase64) { throw new Error('Could not load image'); }
 
@@ -89,22 +97,39 @@ const backfillPhoto = async (
     });
     if (ai.error) { throw new Error(ai.error); }
 
+    // PLOG-15: persist the bilingual `_zh` siblings too (the worker dropped them
+    // before the bilingual era). CSV → Postgres array literal via the shared
+    // helper the photo insert uses (the typed `query` wrapper takes primitives).
+    const toPgArray = (csv?: string): string | null =>
+      csv
+        ? convertArrayToPostgresString(
+          csv.split(',').map(s => s.trim()).filter(Boolean),
+        )
+        : null;
     await query(
       `UPDATE photos SET
          title = COALESCE($2, title),
          caption = COALESCE($3, caption),
          tags = COALESCE($4, tags),
          semantic_description = COALESCE($5, semantic_description),
+         title_zh = COALESCE($6, title_zh),
+         caption_zh = COALESCE($7, caption_zh),
+         semantic_description_zh = COALESCE($8, semantic_description_zh),
+         tags_zh = COALESCE($9, tags_zh),
          metadata_status = 'done',
-         input_hash = $6,
+         input_hash = $10,
          updated_at = CURRENT_TIMESTAMP
        WHERE id = $1`,
       [
         row.id,
         ai.title ?? null,
         ai.caption ?? null,
-        ai.tags ? `{${ai.tags}}` : null,
+        toPgArray(ai.tags),
         ai.semantic ?? null,
+        ai.titleZh ?? null,
+        ai.captionZh ?? null,
+        ai.semanticZh ?? null,
+        toPgArray(ai.tagsZh),
         inputHash,
       ],
     );

@@ -25,6 +25,12 @@ describe('normalizeAiResult / normalizeTags (PLOG-9 code-enforced invariants)', 
   it('drops punctuation-only tags (e.g. ".") that would break routing', () => {
     expect(normalizeTags('cat, ., fog, -')).toEqual(['cat', 'fog']);
   });
+  it('drops reasoning-leakage + field-name tags, keeps short keywords', () => {
+    expect(normalizeTags(
+      'cat, tags-zh, semantic, black-and-white, ' +
+      'this-is-clearly-reasoning-leakage-wait-no-schema',
+    )).toEqual(['cat', 'black-and-white']);
+  });
   it('strips markdown/quotes/trailing-period from text fields', () => {
     expect(normalizeAiResult({ title: '"**Hello**"', caption: 'A caption.' }))
       .toEqual({ title: 'Hello', caption: 'A caption' });
@@ -56,5 +62,26 @@ describe('normalizeAiResult bilingual (zh) siblings (FORK)', () => {
   it('omits tags_zh entirely when the model supplied none', () => {
     expect(normalizeAiResult({ tags: 'fog', title_zh: '雾' }))
       .toEqual({ tags: ['fog'], title_zh: '雾' });
+  });
+});
+
+describe('normalizeAiResult facet pass-through (PLOG-15)', () => {
+  it('passes facet enum fields + subject through unchanged', () => {
+    expect(normalizeAiResult({
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+      light: null, subject: ['pier'], subject_zh: ['码头'],
+    })).toEqual({
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+      light: null, subject: ['pier'], subject_zh: ['码头'],
+    });
+  });
+  it('still cleans text fields alongside facets', () => {
+    expect(normalizeAiResult({
+      title: '"Hi"',
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+    })).toEqual({
+      title: 'Hi',
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+    });
   });
 });

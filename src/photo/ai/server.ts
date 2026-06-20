@@ -4,6 +4,10 @@ import {
   getAiImageQuerySchema,
   getAiTextFieldsToGenerate,
 } from '.';
+import {
+  facetsToTags,
+  FacetClassification,
+} from './normalizeAiResult';
 import { AI_TEXT_AUTO_GENERATED_FIELDS } from '@/app/config';
 import { PhotoFormData } from '../form';
 import { Tags } from '@/tag';
@@ -39,31 +43,31 @@ export const generateAiImageQueries = async ({
         existingTitle,
         uniqueTags,
       );
-      // The object query returns tags as normalized string[] (PLOG-9); re-join
-      // to the CSV string callers expect. zh siblings mirror their en field.
+      // PLOG-15: the object query returns a FACET classification for tags; the
+      // text fields keep their bilingual siblings. Collapse facets → the CSV
+      // tags/tagsZh callers persist (vocabulary-defined zh for facet tags).
       const r = await generateOpenAiImageObjectQuery(
         imageBase64,
         query,
         schema,
         isBatch,
-      ) as {
+      ) as FacetClassification & {
         title?: string
         caption?: string
-        tags?: string[]
         semantic?: string
         title_zh?: string | null
         caption_zh?: string | null
-        tags_zh?: string[] | null
         semantic_zh?: string | null
       };
+      const { tags, tagsZh } = facetsToTags(r);
       return {
         ...(r.title && { title: r.title }),
         ...(r.caption && { caption: r.caption }),
-        ...(r.tags && { tags: r.tags.join(', ') }),
+        ...(tags.length > 0 && { tags: tags.join(', ') }),
         ...(r.semantic && { semantic: r.semantic }),
         ...(r.title_zh && { titleZh: r.title_zh }),
         ...(r.caption_zh && { captionZh: r.caption_zh }),
-        ...(r.tags_zh && { tagsZh: r.tags_zh.join(', ') }),
+        ...(tagsZh.length > 0 && { tagsZh: tagsZh.join(', ') }),
         ...(r.semantic_zh && { semanticZh: r.semantic_zh }),
       };
     } catch (e: any) {

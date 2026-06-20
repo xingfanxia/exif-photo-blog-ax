@@ -30,6 +30,15 @@ export default function useSyncAiContentToForm(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [aiContent?.tags]);
 
+  // PLOG-15: tags now generate bilingually (faceted object path) — sync the
+  // zh siblings into the form alongside the canonical en tags.
+  useEffect(() =>
+    setFormData(data => aiContent?.tagsZh
+      ? { ...data, tagsZh: aiContent.tagsZh }
+      : data),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [aiContent?.tagsZh]);
+
   useEffect(() =>
     setFormData(data => aiContent?.semanticDescription
       ? { ...data, semanticDescription: aiContent.semanticDescription }

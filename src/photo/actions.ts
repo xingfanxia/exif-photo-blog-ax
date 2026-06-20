@@ -710,6 +710,22 @@ export const streamAiImageQueryAction = async (
     );
   });
 
+// PLOG-15: tags are now a CONTROLLED facet classification (structured output),
+// which can't stream as free text like title/caption/semantic. The interactive
+// "generate tags" button uses this NON-streaming object-path action so it
+// produces the SAME faceted, bilingual tags as the batch/backfill path — one
+// source of truth, no drift between the two generators.
+export const generateAiImageTagsAction = async (imageBase64: string) =>
+  runAuthenticatedAdminServerAction(async () => {
+    const uniqueTags = await getUniqueTags();
+    const { tags, tagsZh } = await generateAiImageQueries({
+      imageBase64,
+      textFieldsToGenerate: ['tags'],
+      uniqueTags,
+    });
+    return { tags: tags ?? '', tagsZh: tagsZh ?? '' };
+  });
+
 export const getImageBlurAction = async (url: string) =>
   runAuthenticatedAdminServerAction(() => blurImageFromUrl(url));
 

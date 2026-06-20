@@ -12,7 +12,6 @@ import {
   normalizeAiResult,
   AiResultRaw,
 } from '@/photo/ai/normalizeAiResult';
-import { AI_TAGS_MIN, AI_TAGS_MAX } from '@/photo/ai/prompts';
 import {
   checkRateLimitAndThrow as _checkRateLimitAndThrow,
 } from '@/platforms/rate-limit';
@@ -170,9 +169,9 @@ export const generateOpenAiImageObjectQuery = async <T extends z.ZodSchema>(
     // One tolerant retry with a stricter instruction on parse/shape failure.
     return run(
       `${query}\n\nRespond ONLY with valid JSON matching the schema. ` +
-      `"tags" must be an array of ${AI_TAGS_MIN}-${AI_TAGS_MAX} specific, ` +
-      'non-generic keywords. Include the Simplified-Chinese "*_zh" siblings ' +
-      '(title_zh, caption_zh, tags_zh, semantic_zh); tags_zh aligned to tags.',
+      'For each facet use the EXACT slug from its allowed list (null only ' +
+      'where the schema allows). Include the Simplified-Chinese siblings ' +
+      '(title_zh, caption_zh, semantic_zh) and subject_zh aligned to subject.',
     );
   }
 };

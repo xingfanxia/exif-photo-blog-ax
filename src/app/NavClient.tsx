@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import AppGrid from '../components/AppGrid';
 import AppViewSwitcher, { SwitcherSelection } from '@/app/AppViewSwitcher';
+import ContentLanguageSwitcher from '@/app/ContentLanguageSwitcher';
+import ThemeSwitcher from '@/app/ThemeSwitcher';
 import {
   PATH_ROOT,
   isPathAbout,
@@ -113,6 +115,11 @@ export default function NavClient({
                   )}>
                     {navCaption}
                   </div>}
+              </div>
+              {/* FORK: sticky language (EN/中) + theme switcher in the nav */}
+              <div className="shrink-0 flex items-center gap-2.5">
+                <ContentLanguageSwitcher />
+                <ThemeSwitcher />
               </div>
             </nav>]
             : []}

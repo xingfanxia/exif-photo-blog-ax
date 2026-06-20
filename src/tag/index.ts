@@ -17,6 +17,7 @@ import {
 } from '@/utility/string';
 import { CategoryQueryMeta, sortCategoryByCount } from '@/category';
 import { AppTextState } from '@/i18n/state';
+import { tagDisplayRank } from '@/photo/ai/tagVocabulary';
 
 // Reserved tags
 export const TAG_FAVS     = 'favs';
@@ -62,6 +63,21 @@ export const sortTagsArray = (
 ) => tags
   .filter(tag => tag !== tagToExclude)
   .sort((a, b) => isTagFavs(a) ? -1 : a.localeCompare(b));
+
+// PLOG-15: order tags by facet (genre→mood→color→tonality→light→subject) so a
+// photo's tags read as a faceted descriptor. Favs pinned first; alpha within a
+// facet. Non-vocabulary (legacy/subject) tags sort after the facets.
+export const sortTagsByFacet = (
+  tags: string[],
+  tagToExclude?: string,
+) => tags
+  .filter(tag => tag !== tagToExclude)
+  .sort((a, b) => {
+    if (isTagFavs(a)) { return -1; }
+    if (isTagFavs(b)) { return 1; }
+    const rank = tagDisplayRank(a) - tagDisplayRank(b);
+    return rank !== 0 ? rank : a.localeCompare(b);
+  });
 
 export const sortTags = (
   tags: Tags,

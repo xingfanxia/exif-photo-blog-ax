@@ -19,6 +19,10 @@ export default function ZoomControls({
   selectImageElement?: (container: HTMLElement | null) =>
     HTMLImageElement | null
   isEnabled?: boolean
+  // FORK (PLOG-6 follow-up): the un-suffixed R2 original to load in the
+  // fullscreen viewer, so zoom shows true full-res instead of the lg (1080px)
+  // render variant. When omitted the viewer falls back to the rendered src.
+  fullResImageUrl?: string
 }) {
   const refImageContainer = useRef<HTMLDivElement>(null);
 
