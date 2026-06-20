@@ -31,18 +31,20 @@ const LOCALE_TEXT_IMPORTS: Record<
 };
 
 export const getTextForLocale = async (locale: string): Promise<I18N> => {
-  const text = EN_US;
-  Object.entries(
-    await LOCALE_TEXT_IMPORTS[locale.toLocaleLowerCase()]?.() ?? {},
-  )
-    .forEach(([key, value]) => {
-      // Fall back to English for missing keys
-      text[key as keyof I18N] = {
-        ...text[key as keyof I18N],
-        ...value as any,
-      };
-    });
-
+  // FORK: build a FRESH object instead of mutating the shared EN_US singleton.
+  // The old `const text = EN_US` mutated the import in place — harmless when one
+  // locale is loaded once, but it corrupts state when TWO locales are loaded for
+  // the content-language toggle. Each section falls back to English for missing
+  // keys.
+  const overrides =
+    await LOCALE_TEXT_IMPORTS[locale.toLocaleLowerCase()]?.() ?? {};
+  const text = { ...EN_US } as I18N;
+  Object.entries(overrides).forEach(([key, value]) => {
+    text[key as keyof I18N] = {
+      ...EN_US[key as keyof I18N],
+      ...value as any,
+    };
+  });
   return text;
 };
 

@@ -3,7 +3,6 @@
 import { clsx } from 'clsx/lite';
 import AppGrid from '../components/AppGrid';
 import ThemeSwitcher from '@/app/ThemeSwitcher';
-import ContentLanguageSwitcher from '@/app/ContentLanguageSwitcher';
 import Link from 'next/link';
 import { SHOW_REPO_LINK } from '@/app/config';
 import RepoLink from '../components/RepoLink';
@@ -73,8 +72,7 @@ export default function Footer() {
                         {appText.nav.admin}
                       </Link>}
               </div>
-              <div className="flex items-center h-10 shrink-0 gap-2">
-                <ContentLanguageSwitcher />
+              <div className="flex items-center h-10 shrink-0">
                 <ThemeSwitcher />
               </div>
             </div>]

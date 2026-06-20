@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import AppGrid from '../components/AppGrid';
 import AppViewSwitcher, { SwitcherSelection } from '@/app/AppViewSwitcher';
+import ContentLanguageSwitcher from '@/app/ContentLanguageSwitcher';
 import {
   PATH_ROOT,
   isPathAbout,
@@ -113,6 +114,10 @@ export default function NavClient({
                   )}>
                     {navCaption}
                   </div>}
+              </div>
+              {/* FORK: sticky, always-visible language switcher (EN/中) */}
+              <div className="shrink-0">
+                <ContentLanguageSwitcher />
               </div>
             </nav>]
             : []}
