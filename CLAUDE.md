@@ -12,26 +12,32 @@ even with upstream removed (no clean shell/core seam: `@/photo` is imported by
 rewrite is the AI subsystem (PLOG-9). The full overhaul plan is
 `docs/overhaul/07-IMPLEMENTATION-PLAN.md` (PLOG-1..14).
 
-## Fork discipline (non-negotiable)
+## Fork model — `main` IS the product (changed 2026-06-20)
 
-- **`main` stays byte-identical to `sambecker/main`.** All AX work lands on
-  `ax/*` branches. Verify: `git diff --stat sambecker/main...main` MUST be empty.
-- **Additive over edits.** Prefer new files to editing upstream "hot" files.
-  Every unavoidable hot-file edit is logged in **`UPSTREAM.md`** with a
-  pull-reconcile note. Quiet upstream ≠ dead — keep pulls cherry-pickable.
-- **Config:** `src/app/config.ts` MUST stay byte-identical to upstream. Fork-only
-  config goes in `src/app/config-fork.ts` (re-exports all of config + adds AX
-  vars). Switch a call site's import `@/app/config` → `@/app/config-fork`; never
-  edit config.ts.
+`ax/overhaul` was **merged into `main`** (PR #17): `main` now carries the full
+overhaul + bilingual work and **intentionally diverges** from `sambecker/main`.
 
-### Upstream sync procedure
+- ⚠️ The old "**main byte-identical to upstream**" invariant is **RETIRED**. Do
+  **NOT** reset / `--ff-only` / hard-reset `main` to `sambecker/main` — it would
+  wipe the product. `git diff sambecker/main...main` is now EXPECTED to be large.
+- **Discipline that still holds** (keeps upstream pulls manageable):
+  - **Additive over edits** — prefer new files to editing upstream "hot" files;
+    log every unavoidable hot-file edit in **`UPSTREAM.md`** with a reconcile note.
+  - **Config** — keep `src/app/config.ts` close to upstream; fork-only config
+    goes in `src/app/config-fork.ts` (re-exports config + adds AX vars); switch a
+    call site's import `@/app/config` → `@/app/config-fork`.
+  - New feature work lands on `ax/*` branches → PR → merge to `main`.
+
+### Upstream sync procedure (post-divergence — `main` is no longer a mirror)
 
 ```bash
 git fetch sambecker
 git log --oneline main..sambecker/main      # what's new upstream
-git checkout main && git merge --ff-only sambecker/main   # main is a mirror
-# Reconcile ax/* against new main; consult UPSTREAM.md for each hot-file entry.
-git checkout ax/overhaul && git rebase main
+# MERGE upstream in and resolve conflicts (consult UPSTREAM.md for hot files).
+# Do NOT ff-only / reset — main carries product commits upstream doesn't have.
+git checkout -b sync/upstream-YYYYMMDD main
+git merge sambecker/main
+# resolve conflicts, test (npm run test:ci + npm run build), then PR sync/* → main
 ```
 
 ### Expected hot-file divergences
