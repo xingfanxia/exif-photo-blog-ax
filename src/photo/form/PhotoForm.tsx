@@ -47,6 +47,7 @@ import ErrorNote from '@/components/ErrorNote';
 import { convertRecipesForForm, Recipes } from '@/recipe';
 import deepEqual from 'fast-deep-equal/es6/react';
 import ApplyRecipeTitleGloballyCheckbox from './ApplyRecipesGloballyCheckbox';
+import useSyncAiContentToForm from './useSyncAiContentToForm';
 import { convertFilmsForForm, Films } from '@/film';
 import { isMakeFujifilm } from '@/platforms/fujifilm';
 import PhotoFilmIcon from '@/film/PhotoFilmIcon';
@@ -209,29 +210,8 @@ export default function PhotoForm({
     }
   }, [updatedBlurData]);
 
-  useEffect(() =>
-    setFormData(data => aiContent?.title
-      ? { ...data, title: aiContent?.title }
-      : data),
-  [aiContent?.title]);
-
-  useEffect(() =>
-    setFormData(data => aiContent?.caption
-      ? { ...data, caption: aiContent?.caption }
-      : data),
-  [aiContent?.caption]);
-
-  useEffect(() =>
-    setFormData(data => aiContent?.tags
-      ? { ...data, tags: aiContent?.tags }
-      : data),
-  [aiContent?.tags]);
-
-  useEffect(() =>
-    setFormData(data => aiContent?.semanticDescription
-      ? { ...data, semanticDescription: aiContent?.semanticDescription }
-      : data),
-  [aiContent?.semanticDescription]);
+  // PLOG-14: AI streamed-field → form sync extracted to a hook.
+  useSyncAiContentToForm(aiContent, setFormData);
 
   useEffect(() => {
     onFormDataChange?.(formData);

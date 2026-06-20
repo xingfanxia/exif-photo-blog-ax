@@ -208,3 +208,12 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | File | Kind | What & why | Pull-reconcile note |
 |---|---|---|---|
 | `app/layout.tsx` | EDIT | Wrap `<CommandK />` in `<Suspense fallback={null}>` so its aggregations stream instead of blocking first paint. | Re-apply. |
+
+### PLOG-14 (PhotoForm) — extract AI-sync hook (branch `ax/overhaul`)
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/photo/form/useSyncAiContentToForm.ts` | NEW | The 4 AI streamed-field→form sync effects, extracted from PhotoForm. | None (additive). |
+| `src/photo/form/PhotoForm.tsx` | EDIT | Use the hook (732→712 lines). | Re-apply. |
+
+**PLOG-14 deferred (pure legibility, working files at threshold):** deeper PhotoForm decomposition (fieldRenderers / renderField map / FormThumbnail) + AppStateProvider facade split (high-risk, every useAppState consumer). User-facing wins (auth-gate, CommandK) shipped + browser-verified.
