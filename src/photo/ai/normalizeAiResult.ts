@@ -37,12 +37,30 @@ const DENY = new Set(GENERIC_TAG_DENY_LIST.map(t => t.toLowerCase()));
 // model can't overflow the column and abort the insert.
 const TAG_MAX_LENGTH = 255;
 
-// A tag must contain at least one letter or number (Unicode-aware, so CJK
-// counts). Drops punctuation-only junk like "." or "-" that the model very
-// occasionally emits — a "." tag otherwise breaks the /tag/[tag] route at build.
-const HAS_ALPHANUMERIC = /[\p{L}\p{N}]/u;
+// A real tag is a SHORT keyword. These guards reject the junk a reasoning model
+// (gpt-5.5) occasionally dumps into the structured tags array:
+//   • punctuation-only ("." breaks the /tag/[tag] route at build)
+//   • field-name echoes from the bilingual prompt ("semantic", "tags-zh")
+//   • multi-clause chain-of-thought ("tags-zh-wait-schema-wrong",
+//     "coffee-cup-no-comma-separated-schema-array…") — many hyphens / too long
+// Unicode-aware so legitimate CJK keywords still pass.
+// The canonical en `tags` are lowercase ASCII kebab SLUGS (no leading/trailing/
+// double hyphens). This single pattern subsumes the prior alphanumeric +
+// no-CJK + no-punctuation guards: CJK (which belongs only in tags_zh), ".",
+// "tags-zh-", accents, etc. all fail it. The zh DISPLAY labels bypass isValidTag.
+const TAG_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const TAG_KEYWORD_MAX_LENGTH = 40;
+const TAG_MAX_HYPHENS = 3; // ≤ 4 kebab words
+const FIELD_NAME_LEAK = new Set([
+  'zh', 'en', 'semantic', 'tags', 'title', 'caption', 'json', 'schema',
+]);
 const isValidTag = (tag: string) =>
-  Boolean(tag) && tag.length <= TAG_MAX_LENGTH && HAS_ALPHANUMERIC.test(tag);
+  Boolean(tag) &&
+  tag.length <= TAG_KEYWORD_MAX_LENGTH &&
+  TAG_SLUG.test(tag) &&
+  !tag.endsWith('-zh') &&
+  !FIELD_NAME_LEAK.has(tag) &&
+  (tag.match(/-/g)?.length ?? 0) <= TAG_MAX_HYPHENS;
 
 const normalizeTag = (tag: string): string =>
   parameterize(tag).toLowerCase();

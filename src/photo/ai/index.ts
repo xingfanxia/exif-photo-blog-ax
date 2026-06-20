@@ -110,7 +110,9 @@ export const getAiImageQuerySchema = (
     'For each field X, also provide X_zh as its natural Simplified-Chinese ' +
     'version (title_zh, caption_zh, tags_zh, semantic_zh). tags_zh MUST have ' +
     'the same number of items as tags, aligned position-by-position so tags_zh' +
-    '[i] is the Chinese of tags[i]. Translate naturally, not literally.',
+    '[i] is the Chinese of tags[i]. Translate naturally, not literally. ' +
+    'Each tag is a SHORT 1-2 word keyword: put ONLY final values in every ' +
+    'field — never reasoning, notes, schema talk, or field names inside a value.',
   );
 
   const query = queryLines.join('\n');

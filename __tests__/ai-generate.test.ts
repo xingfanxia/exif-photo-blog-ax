@@ -25,6 +25,12 @@ describe('normalizeAiResult / normalizeTags (PLOG-9 code-enforced invariants)', 
   it('drops punctuation-only tags (e.g. ".") that would break routing', () => {
     expect(normalizeTags('cat, ., fog, -')).toEqual(['cat', 'fog']);
   });
+  it('drops reasoning-leakage + field-name tags, keeps short keywords', () => {
+    expect(normalizeTags(
+      'cat, tags-zh, semantic, black-and-white, ' +
+      'this-is-clearly-reasoning-leakage-wait-no-schema',
+    )).toEqual(['cat', 'black-and-white']);
+  });
   it('strips markdown/quotes/trailing-period from text fields', () => {
     expect(normalizeAiResult({ title: '"**Hello**"', caption: 'A caption.' }))
       .toEqual({ title: 'Hello', caption: 'A caption' });
