@@ -9,6 +9,7 @@ export const TEXT: I18N = {
     created: 'Oluşturuldu',
     updated: 'Güncellendi',
     copied: 'Fotoğraf bağlantısı kopyalandı',
+    shareText: 'Check out this photo',
   },
   category: {
     camera: 'Kamera',

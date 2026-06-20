@@ -31,3 +31,8 @@ export const GENERIC_TAG_DENY_LIST: string[] = [
 // Tag count bounds enforced by the schema AND normalizeAiResult.
 export const AI_TAGS_MIN = 4;
 export const AI_TAGS_MAX = 10;
+
+// PLOG-15: max free-form `subject` tags allowed alongside the controlled facet
+// tags (genre/mood/color/tonality/light). Facets give clustering; 1-2 subjects
+// add specificity.
+export const AI_SUBJECT_TAGS_MAX = 2;

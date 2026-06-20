@@ -2,7 +2,6 @@
 
 import { clsx } from 'clsx/lite';
 import AppGrid from '../components/AppGrid';
-import ThemeSwitcher from '@/app/ThemeSwitcher';
 import Link from 'next/link';
 import { SHOW_REPO_LINK } from '@/app/config';
 import RepoLink from '../components/RepoLink';
@@ -71,9 +70,6 @@ export default function Footer() {
                       : <Link href={PATH_ADMIN_PHOTOS}>
                         {appText.nav.admin}
                       </Link>}
-              </div>
-              <div className="flex items-center h-10 shrink-0">
-                <ThemeSwitcher />
               </div>
             </div>]
             : []}

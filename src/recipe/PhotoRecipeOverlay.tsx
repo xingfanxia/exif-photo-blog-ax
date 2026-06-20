@@ -48,6 +48,7 @@ export default function PhotoRecipeOverlay({
   } = data;
 
   const appText = useAppText();
+  const recipeWord = appText.category.recipe;
 
   const whiteBalanceTypeFormatted = formatWhiteBalance(data);
 
@@ -87,7 +88,7 @@ export default function PhotoRecipeOverlay({
         'translate-y-[0.5px] tracking-wide',
         'truncate max-w-full',
       )}>
-        {title ? formatRecipe(title) : 'Recipe'}
+        {title ? formatRecipe(title) : recipeWord}
       </div>
     </div>;
 
@@ -133,9 +134,9 @@ export default function PhotoRecipeOverlay({
             : renderRecipeTitle}
         </div>
         <CopyButton
-          label={`${title
-            ? `${formatRecipe(title).toLocaleUpperCase()} recipe`
-            : 'Recipe'}`}
+          label={title
+            ? `${formatRecipe(title).toLocaleUpperCase()} ${recipeWord}`
+            : recipeWord}
           text={generateRecipeText({ title, data, film })}
           iconSize={17}
           className={clsx(

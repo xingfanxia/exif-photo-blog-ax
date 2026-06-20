@@ -9,6 +9,7 @@ export const TEXT: I18N = {
     created: 'Criado',
     updated: 'Atualizado',
     copied: 'Link para a fotografia copiada',
+    shareText: 'Check out this photo',
   },
   category: {
     camera: 'Máquina Fotográfica',

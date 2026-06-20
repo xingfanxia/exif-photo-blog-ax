@@ -15,6 +15,7 @@ export default function useImageZoomControls({
   refImageContainer,
   selectImageElement,
   isEnabled,
+  fullResImageUrl,
 } : {
   refImageContainer: RefObject<HTMLElement | null>
 } & Omit<ComponentProps<typeof ZoomControls>, 'ref' | 'children'>) {
@@ -66,7 +67,10 @@ export default function useImageZoomControls({
           url: (image: HTMLImageElement) => {
             // Addresses Safari bug where images don't load
             image.loading = 'eager';
-            return image.src;
+            // FORK: serve the un-suffixed R2 ORIGINAL in the fullscreen viewer
+            // (zoom showed the lg=1080px render variant before). Falls back to
+            // the rendered src for non-R2 / missing originals.
+            return fullResImageUrl ?? image.src;
           },
           show: () => {
             setShouldRespondToKeyboardCommands?.(false);
@@ -94,6 +98,7 @@ export default function useImageZoomControls({
     refImageContainer,
     selectImageElement,
     setShouldRespondToKeyboardCommands,
+    fullResImageUrl,
   ]);
 
   return {

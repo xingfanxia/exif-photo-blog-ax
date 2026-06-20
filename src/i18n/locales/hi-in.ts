@@ -9,6 +9,7 @@ export const TEXT: I18N = {
     created: 'निर्मित',
     updated: 'अद्यतनित',
     copied: 'फोटो का लिंक कॉपी किया गया',
+    shareText: 'Check out this photo',
   },
   category: {
     camera: 'कैमरा',

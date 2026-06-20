@@ -1,13 +1,31 @@
 import { parameterize } from '@/utility/string';
 import { cleanUpAiTextResponse } from '@/photo/ai';
 import { GENERIC_TAG_DENY_LIST, AI_TAGS_MAX } from './prompts';
+import {
+  TAG_FACETS,
+  FacetKey,
+  slugsForFacet,
+  zhForSlug,
+} from './tagVocabulary';
 
 // Pure, code-enforced post-processing of AI output (PLOG-9). The model is
 // asked for clean tags, but the invariants (lowercase / kebab / dedupe /
 // deny-list / cap / soft-merge with existing) are enforced by code, never
 // trusted to the model. Text fields are stripped of markdown/quotes.
 
-export interface AiResultRaw {
+// PLOG-15: the controlled facet classification the model now returns for tags.
+// Collapsed to `tags`/`tags_zh` by facetsToTags (downstream of schema.parse).
+export interface FacetClassification {
+  genre?: string | null;
+  mood?: string | null;
+  color?: string | null;
+  tonality?: string | null;
+  light?: string | null;
+  subject?: string[] | null;
+  subject_zh?: string[] | null;
+}
+
+export interface AiResultRaw extends FacetClassification {
   title?: string;
   caption?: string;
   semantic?: string;
@@ -20,7 +38,7 @@ export interface AiResultRaw {
   tags_zh?: string | string[] | null;
 }
 
-export interface AiResult {
+export interface AiResult extends FacetClassification {
   title?: string;
   caption?: string;
   semantic?: string;
@@ -33,7 +51,7 @@ export interface AiResult {
 
 const DENY = new Set(GENERIC_TAG_DENY_LIST.map(t => t.toLowerCase()));
 
-// Tags (en + zh) are VARCHAR(255); guard per-tag so a stray long phrase from the
+// Tags (en + zh) are VARCHAR(255); guard per-tag so a stray long phrase from
 // model can't overflow the column and abort the insert.
 const TAG_MAX_LENGTH = 255;
 
@@ -47,7 +65,7 @@ const TAG_MAX_LENGTH = 255;
 // The canonical en `tags` are lowercase ASCII kebab SLUGS (no leading/trailing/
 // double hyphens). This single pattern subsumes the prior alphanumeric +
 // no-CJK + no-punctuation guards: CJK (which belongs only in tags_zh), ".",
-// "tags-zh-", accents, etc. all fail it. The zh DISPLAY labels bypass isValidTag.
+// "tags-zh-", accents, etc. all fail it. zh DISPLAY labels bypass isValidTag.
 const TAG_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const TAG_KEYWORD_MAX_LENGTH = 40;
 const TAG_MAX_HYPHENS = 3; // ≤ 4 kebab words
@@ -151,5 +169,54 @@ export const normalizeAiResult = (
     // tags-only (or null) result stays {tags} (display falls back to en), and
     // when zh IS present the paired normalizer guarantees alignment to tags.
     ...(tagPairs && raw.tags_zh != null && { tags_zh: tagPairs.tagsZh }),
+    // PLOG-15: facet classification fields pass through UNCHANGED (the schema
+    // enum-validates them) so schema.parse still sees them. The facet→tags
+    // collapse + subject hygiene happen downstream in facetsToTags. `light` may
+    // be null (nullable enum); subject stays raw here.
+    ...(raw.genre !== undefined && { genre: raw.genre }),
+    ...(raw.mood !== undefined && { mood: raw.mood }),
+    ...(raw.color !== undefined && { color: raw.color }),
+    ...(raw.tonality !== undefined && { tonality: raw.tonality }),
+    ...(raw.light !== undefined && { light: raw.light }),
+    ...(raw.subject !== undefined && { subject: raw.subject }),
+    ...(raw.subject_zh !== undefined && { subject_zh: raw.subject_zh }),
   };
+};
+
+// PLOG-15: deterministic collapse of a facet classification into the
+// `tags`/`tags_zh` arrays the DB + browse already use. Facet tags come first in
+// facet order (genre→mood→color→tonality→light) with vocabulary zh, then 0-2
+// free-form subject tags with full hygiene + zh alignment (slug fallback).
+// Facet slugs are TRUSTED (enum-validated) and bypass the generic deny-list —
+// `architecture` etc. are meaningful genres the free-form deny-list bans.
+export const facetsToTags = (
+  r: FacetClassification,
+): { tags: string[]; tagsZh: string[] } => {
+  const tags: string[] = [];
+  const tagsZh: string[] = [];
+  const seen = new Set<string>();
+
+  const push = (slug: string, zh: string) => {
+    if (!slug || seen.has(slug) || tags.length >= AI_TAGS_MAX) { return; }
+    seen.add(slug);
+    tags.push(slug);
+    tagsZh.push(zh && zh.length <= TAG_MAX_LENGTH ? zh : slug);
+  };
+
+  TAG_FACETS.forEach(facet => {
+    const slug = (r[facet.key as FacetKey] ?? '').toString();
+    if (slug && slugsForFacet(facet.key).includes(slug)) {
+      push(slug, zhForSlug(slug) ?? slug);
+    }
+  });
+
+  const subjects = Array.isArray(r.subject) ? r.subject : [];
+  const subjectsZh = Array.isArray(r.subject_zh) ? r.subject_zh : [];
+  subjects.forEach((value, i) => {
+    const norm = normalizeTag(value);
+    if (!isValidTag(norm) || DENY.has(norm)) { return; }
+    push(norm, (subjectsZh[i] ?? '').trim() || norm);
+  });
+
+  return { tags, tagsZh };
 };

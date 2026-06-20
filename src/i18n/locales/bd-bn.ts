@@ -9,6 +9,7 @@ export const TEXT: I18N = {
     created: 'তৈরি হয়েছে',
     updated: 'আপডেট হয়েছে',
     copied: 'ছবির লিংক কপি হয়েছে',
+    shareText: 'Check out this photo',
   },
   category: {
     camera: 'ক্যামেরা',

@@ -9,6 +9,7 @@ export const TEXT: I18N = {
     created: 'Tạo',
     updated: 'Cập nhật',
     copied: 'Đã sao chép liên kết',
+    shareText: 'Check out this photo',
   },
   category: {
     camera: 'Máy ảnh',

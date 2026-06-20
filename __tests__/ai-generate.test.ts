@@ -64,3 +64,24 @@ describe('normalizeAiResult bilingual (zh) siblings (FORK)', () => {
       .toEqual({ tags: ['fog'], title_zh: '雾' });
   });
 });
+
+describe('normalizeAiResult facet pass-through (PLOG-15)', () => {
+  it('passes facet enum fields + subject through unchanged', () => {
+    expect(normalizeAiResult({
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+      light: null, subject: ['pier'], subject_zh: ['码头'],
+    })).toEqual({
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+      light: null, subject: ['pier'], subject_zh: ['码头'],
+    });
+  });
+  it('still cleans text fields alongside facets', () => {
+    expect(normalizeAiResult({
+      title: '"Hi"',
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+    })).toEqual({
+      title: 'Hi',
+      genre: 'street', mood: 'serene', color: 'warm', tonality: 'balanced',
+    });
+  });
+});

@@ -22,7 +22,7 @@ import DownloadButton from '@/components/DownloadButton';
 import PhotoCamera from '../camera/PhotoCamera';
 import { cameraFromPhoto } from '@/camera';
 import PhotoFilm from '@/film/PhotoFilm';
-import { sortTagsArray } from '@/tag';
+import { sortTagsByFacet } from '@/tag';
 import DivDebugBaselineGrid from '@/components/DivDebugBaselineGrid';
 import PhotoLink from './PhotoLink';
 import {
@@ -158,7 +158,7 @@ export default function PhotoLarge({
     refTriggers,
   });
 
-  const tags = sortTagsArray(photo.tags, primaryTag);
+  const tags = sortTagsByFacet(photo.tags, primaryTag);
   // FORK: localized (zh) tag display labels keyed by canonical slug — routing
   // stays on the slug. Only when zh is active and the arrays are index-aligned.
   const tagLabels = contentLanguage === 'zh' &&
@@ -227,6 +227,7 @@ export default function PhotoLarge({
       <ZoomControls
         ref={refZoomControls}
         selectImageElement={selectZoomImageElement}
+        fullResImageUrl={photo.url}
         {...{ isEnabled: showZoomControls, shouldZoomOnFKeydown }}
       >
         <ImageLarge
