@@ -2,17 +2,20 @@
 
 This repo is a fork of [`sambecker/exif-photo-blog`](https://github.com/sambecker/exif-photo-blog).
 
-**Contract:** `main` stays byte-identical to `sambecker/main`. All AX work lives
-on `ax/*` branches. Divergence is **additive-preferred** (new files over edits).
-Every unavoidable edit to an upstream-tracked ("hot") file is logged below so a
-future `sambecker/main` pull can be reconciled deliberately, never by surprise.
+**Contract (updated 2026-06-20):** the old "`main` byte-identical to
+`sambecker/main`" invariant is **RETIRED** — `ax/overhaul` was merged into `main`
+(PR #17), so `main` IS the product and **intentionally diverges** (see
+`CLAUDE.md` → "Fork model"). New work still lands on `ax/*` → PR → merge.
+Divergence stays **additive-preferred** (new files over edits); every unavoidable
+edit to an upstream-tracked ("hot") file is logged below so a future
+`sambecker/main` **merge** (no longer a reset/ff) can be reconciled deliberately.
 
-How to verify the contract:
+How to review divergence before an upstream merge:
 
 ```bash
 git fetch sambecker
-git diff --stat sambecker/main...HEAD          # every entry below should appear
-git diff --stat sambecker/main...main          # MUST be empty
+git log --oneline main..sambecker/main         # what's new upstream
+git diff --stat sambecker/main...main          # EXPECTED to be large now
 ```
 
 ---
@@ -217,3 +220,29 @@ Legend: **NEW** = file added by the fork (no merge conflict possible) ·
 | `src/photo/form/PhotoForm.tsx` | EDIT | Use the hook (732→712 lines). | Re-apply. |
 
 **PLOG-14 deferred (pure legibility, working files at threshold):** deeper PhotoForm decomposition (fieldRenderers / renderField map / FormThumbnail) + AppStateProvider facade split (high-risk, every useAppState consumer). User-facing wins (auth-gate, CommandK) shipped + browser-verified.
+
+### PLOG-15 — polish + faceted controlled-vocabulary tags (branch `ax/overhaul`, PR #18)
+
+Design: `docs/overhaul/11-faceted-tag-taxonomy-design.md`. Fork-NEW files have no
+reconcile cost; the EDITs below are small, additive hooks into upstream files.
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/photo/ai/tagVocabulary.ts` | NEW | Controlled bilingual facet vocabulary (genre/mood/color/tonality/light) + `facetForSlug`/`zhForSlug`/`tagDisplayRank`. Source of truth for the faceted tagger. | None (additive). |
+| `src/photo/ai/useAiImageTagsQuery.ts` | NEW | Non-streaming object-path hook for the interactive tag button (tags are structured facets, can't stream). | None (additive). |
+| `src/photo/ai/index.ts` `prompts.ts` `normalizeAiResult.ts` `server.ts` | EDIT (fork-owned, PLOG-9) | `getAiImageQuerySchema` emits `z.enum` per facet + `subject`; `facetsToTags()` collapse; server collapses facets→tags/tags_zh. Fork-owned AI subsystem — re-apply wholesale on conflict. | Re-apply. |
+| `src/platforms/ai.ts` | EDIT (fork-owned, PLOG-9) | Facet-aware retry message; dropped unused AI_TAGS import. | Re-apply. |
+| `src/app/NavClient.tsx` | EDIT | Added `<ThemeSwitcher/>` beside `<ContentLanguageSwitcher/>`. | Re-apply. |
+| `src/app/Footer.tsx` | EDIT | Removed `<ThemeSwitcher/>` (moved to nav). | Re-apply. |
+| `src/components/image/ZoomControls.tsx` `useImageZoomControls.ts` | EDIT | New `fullResImageUrl` prop → viewerjs `url` callback loads the un-suffixed R2 original on fullscreen zoom. | Re-apply. |
+| `src/photo/PhotoLarge.tsx` | EDIT | `sortTagsByFacet` for tag display + pass `fullResImageUrl={photo.url}`. | Re-apply. |
+| `src/photo/PhotoShareModal.tsx` | EDIT | `socialText` → `appText.photo.shareText` (was hardcoded). | Re-apply. |
+| `src/recipe/PhotoRecipeOverlay.tsx` | EDIT | `'Recipe'` fallback → `appText.category.recipe`. | Re-apply. |
+| `src/tag/index.ts` | EDIT | Added `sortTagsByFacet` (facet-ordered display). | Re-apply. |
+| `src/photo/actions.ts` | EDIT | Added `generateAiImageTagsAction` (object-path tags). | Re-apply. |
+| `src/photo/ai/useAiImageQueries.ts` | EDIT (fork-owned) | Tags via `useAiImageTagsQuery`; expose `tagsZh`. | Re-apply. |
+| `src/photo/form/useSyncAiContentToForm.ts` | EDIT (fork-NEW PLOG-14) | Sync `tagsZh` into the form. | None (fork-owned). |
+| `src/i18n/locales/*.ts` (×11) | EDIT | Added `photo.shareText` to every locale (`I18N = typeof EN_US` forces completeness). | Re-apply to all locales. |
+| `scripts/ai-backfill/index.ts` | EDIT (fork-NEW PLOG-10) | Persist `_zh` columns; prompt version → `v2-facets`; fetch R2 `md` variant directly (not `/_next/image`). | None (fork-owned). |
+
+**Verified:** jest 24 suites/118 tests, build exit 0, browser (desktop+iPhone), 51 photos re-tagged (`done: 51`).
