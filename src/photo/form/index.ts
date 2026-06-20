@@ -126,6 +126,33 @@ const FORM_METADATA = (
     validateStringMaxLength: STRING_MAX_LENGTH_LONG,
     shouldHide: () => !aiTextGeneration,
   },
+  // FORK: bilingual (Simplified-Chinese) AI siblings. AI auto-fills these; shown
+  // in the edit form when present so the zh output is reviewable. No capitalize
+  // (meaningless for CJK); hidden when empty so manual uploads aren't cluttered.
+  titleZh: {
+    section: 'text',
+    label: 'title (中文)',
+    validateStringMaxLength: STRING_MAX_LENGTH_SHORT,
+    hideIfEmpty: true,
+  },
+  captionZh: {
+    section: 'text',
+    label: 'caption (中文)',
+    validateStringMaxLength: STRING_MAX_LENGTH_LONG,
+    hideIfEmpty: true,
+  },
+  tagsZh: {
+    section: 'text',
+    label: 'tags (中文)',
+    hideIfEmpty: true,
+  },
+  semanticDescriptionZh: {
+    section: 'text',
+    type: 'textarea',
+    label: 'semantic description 中文 (not visible)',
+    validateStringMaxLength: STRING_MAX_LENGTH_LONG,
+    shouldHide: () => !aiTextGeneration,
+  },
   albums: {
     section: 'text',
     label: 'albums',
@@ -380,6 +407,8 @@ export const convertPhotoToFormData = (photo: Photo): PhotoFormData => {
         return (value ?? [])
           .filter((tag: string) => tag !== TAG_FAVS)
           .join(', ');
+      case 'tagsZh':
+        return (value ?? []).join(', ');
       case 'takenAt':
         return value?.toISOString ? value.toISOString() : value;
       case 'hidden':
@@ -416,6 +445,9 @@ export const convertFormDataToPhotoDbInsert = (
   if (photoForm.favorite === 'true') {
     tags.push(TAG_FAVS);
   }
+  // FORK: zh tags are DISPLAY labels — do NOT parameterize (preserve CJK
+  // exactly); they stay index-aligned to the canonical en tags.
+  const tagsZh = convertStringToArray(photoForm.tagsZh, false);
 
   // Parse FormData:
   // - remove server action ID
@@ -443,6 +475,7 @@ export const convertFormDataToPhotoDbInsert = (
     ...!photoForm.id && { id: generateNanoid() },
     // Delete array field when empty
     tags: tags.length > 0 ? tags : undefined,
+    tagsZh: tagsZh.length > 0 ? tagsZh : undefined,
     ...photoForm.recipeTitle && {
       recipeTitle: parameterize(photoForm.recipeTitle),
     },

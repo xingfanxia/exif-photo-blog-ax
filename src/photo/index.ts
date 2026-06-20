@@ -7,6 +7,7 @@ import {
   SHOW_RECIPES,
 } from '@/app/config';
 import { ABSOLUTE_PATH_HOME_IMAGE } from '@/app/path';
+import { ContentLanguage, localizedText } from '@/app/content-language';
 import { formatDate, formatDateFromPostgresString } from '@/utility/date';
 import {
   formatAperture,
@@ -85,6 +86,11 @@ export interface PhotoDbInsert extends PhotoExif {
   caption?: string
   semanticDescription?: string
   tags?: string[]
+  // FORK: bilingual (Simplified-Chinese) siblings of the AI text fields.
+  titleZh?: string
+  captionZh?: string
+  semanticDescriptionZh?: string
+  tagsZh?: string[]
   recipeTitle?: string
   locationName?: string
   colorData?: string
@@ -98,11 +104,12 @@ export interface PhotoDbInsert extends PhotoExif {
 
 // Raw db response
 export interface PhotoDb extends
-  Omit<PhotoDbInsert, 'takenAt' | 'tags'> {
+  Omit<PhotoDbInsert, 'takenAt' | 'tags' | 'tagsZh'> {
   updatedAt: Date
   createdAt: Date
   takenAt: Date
   tags: string[] | null
+  tagsZh: string[] | null
 }
 
 // Runtime-validated DB→domain boundary (PLOG-11). Replaces the silently-
@@ -123,6 +130,7 @@ export const PhotoRowSchema = z.looseObject({
   url: z.string(),
   extension: z.string(),
   tags: z.array(z.string()).nullable().optional(),
+  tagsZh: z.array(z.string()).nullable().optional(),
   recipeData: jsonbField,
   colorData: jsonbField,
 });
@@ -137,6 +145,7 @@ export interface Photo extends Omit<PhotoDb, 'recipeData' | 'colorData'> {
   exposureCompensationFormatted?: string
   takenAtNaiveFormatted: string
   tags: string[]
+  tagsZh: string[]
   recipeData?: FujifilmRecipe
   colorData?: PhotoColorData
   updateStatus?: PhotoUpdateStatus
@@ -154,6 +163,7 @@ export const parsePhotoFromDb = (photoDbRaw: PhotoDb): Photo => {
   return {
     ...photoDb,
     tags: photoDb.tags ?? [],
+    tagsZh: photoDb.tagsZh ?? [],
     focalLengthFormatted:
       photoDb.focalLength
         ? formatFocalLength(photoDb.focalLength)
@@ -207,10 +217,18 @@ export const convertPhotoToPhotoDbInsert = (
 export const descriptionForPhoto = (
   photo: Photo,
   includeSemanticDescription?: boolean,
+  lang?: ContentLanguage,
 ) =>
-  photo.caption ||
-  (includeSemanticDescription && photo.semanticDescription) ||
+  localizedText(lang, photo.caption, photo.captionZh) ||
+  (includeSemanticDescription &&
+    localizedText(lang, photo.semanticDescription, photo.semanticDescriptionZh))
+  ||
   formatDate({ date: photo.takenAt }).toLocaleUpperCase();
+
+// FORK: localized caption (the one public bypass — PhotoLarge renders the raw
+// caption, not via descriptionForPhoto).
+export const captionForPhoto = (photo: Photo, lang?: ContentLanguage) =>
+  localizedText(lang, photo.caption, photo.captionZh);
 
 export const getPreviousPhoto = (photo: Photo, photos: Photo[]) => {
   const index = photos.findIndex(p => p.id === photo.id);
@@ -254,9 +272,11 @@ export const titleForPhoto = (
   photo: Photo,
   useDateAsTitle = true,
   fallback = 'Untitled',
+  lang?: ContentLanguage,
 ) => {
-  if (photo.title) {
-    return photo.title;
+  const title = localizedText(lang, photo.title, photo.titleZh);
+  if (title) {
+    return title;
   } else if (useDateAsTitle && (photo.takenAt || photo.createdAt)) {
     return formatDate({
       date: photo.takenAt || photo.createdAt,
@@ -267,8 +287,9 @@ export const titleForPhoto = (
   }
 };
 
-export const altTextForPhoto = (photo: Photo) =>
-  photo.semanticDescription || titleForPhoto(photo);
+export const altTextForPhoto = (photo: Photo, lang?: ContentLanguage) =>
+  localizedText(lang, photo.semanticDescription, photo.semanticDescriptionZh) ||
+  titleForPhoto(photo, true, undefined, lang);
 
 export const photoLabelForCount = (
   count: number,

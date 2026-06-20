@@ -125,4 +125,17 @@ export const MIGRATIONS: Migration[] = [{
     ADD COLUMN IF NOT EXISTS metadata_status TEXT,
     ADD COLUMN IF NOT EXISTS input_hash TEXT
   `,
+}, {
+  // FORK: bilingual (Simplified-Chinese) siblings of the AI text fields.
+  // Nullable → instant metadata-only ALTER, no backfill. Display falls back to
+  // the canonical English columns when a zh value is absent.
+  label: '12: Bilingual (zh) Text',
+  fields: ['title_zh', 'caption_zh', 'semantic_description_zh', 'tags_zh'],
+  run: () => sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS title_zh TEXT,
+    ADD COLUMN IF NOT EXISTS caption_zh TEXT,
+    ADD COLUMN IF NOT EXISTS semantic_description_zh TEXT,
+    ADD COLUMN IF NOT EXISTS tags_zh VARCHAR(255)[]
+  `,
 }];

@@ -30,3 +30,28 @@ describe('normalizeAiResult / normalizeTags (PLOG-9 code-enforced invariants)', 
     expect(normalizeAiResult({ tags: 'fog' })).toEqual({ tags: ['fog'] });
   });
 });
+
+describe('normalizeAiResult bilingual (zh) siblings (FORK)', () => {
+  it('forwards zh text fields cleaned, alongside en', () => {
+    expect(normalizeAiResult({
+      title: 'Sunset', title_zh: '"日落"', semantic_zh: '一张照片.',
+    })).toEqual({ title: 'Sunset', title_zh: '日落', semantic_zh: '一张照片' });
+  });
+  it('keeps tags_zh index-aligned to tags when an en tag is dropped', () => {
+    // 'sky' is deny-listed → dropped from en AND its zh partner (天空) drops too
+    expect(normalizeAiResult({
+      tags: 'fog, sky, pier',
+      tags_zh: ['雾', '天空', '码头'],
+    })).toEqual({ tags: ['fog', 'pier'], tags_zh: ['雾', '码头'] });
+  });
+  it('falls back to the en slug when a zh tag is missing', () => {
+    expect(normalizeAiResult({
+      tags: ['Golden Gate', 'fog'],
+      tags_zh: ['金门'],
+    })).toEqual({ tags: ['golden-gate', 'fog'], tags_zh: ['金门', 'fog'] });
+  });
+  it('omits tags_zh entirely when the model supplied none', () => {
+    expect(normalizeAiResult({ tags: 'fog', title_zh: '雾' }))
+      .toEqual({ tags: ['fog'], title_zh: '雾' });
+  });
+});

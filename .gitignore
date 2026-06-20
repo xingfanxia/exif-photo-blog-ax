@@ -41,3 +41,4 @@ next-env.d.ts
 /backup
 /app/restore
 temp.jpg
+.wrangler/

@@ -1,7 +1,11 @@
 import { generateText, Output, streamText, LanguageModel } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { OPENAI_BASE_URL, OPENAI_MODEL, OPENAI_SECRET_KEY } from '@/app/config';
-import { AI_MODEL, AI_GATEWAY_API_KEY } from '@/app/config-fork';
+import {
+  AI_MODEL,
+  AI_GATEWAY_API_KEY,
+  AI_REASONING_EFFORT,
+} from '@/app/config-fork';
 import { removeBase64Prefix } from '@/utility/image';
 import { cleanUpAiTextResponse } from '@/photo/ai';
 import {
@@ -34,6 +38,13 @@ const openai = OPENAI_SECRET_KEY
   })
   : undefined;
 
+// Opt-in reasoning-effort, attached ONLY on the openai-compatible path so a
+// non-reasoning gateway model never receives an unsupported `reasoning_effort`.
+// Spread into each generate/stream call (no-op when unset). See config-fork.
+const REASONING_PROVIDER_OPTIONS = openai && AI_REASONING_EFFORT
+  ? { providerOptions: { openai: { reasoningEffort: AI_REASONING_EFFORT } } }
+  : undefined;
+
 // Provider-agnostic vision model resolver (PLOG-9 Part 2). Priority:
 //   injected model (test seam / explicit) → OpenAI key (escape hatch) →
 //   AI Gateway model string (AI_MODEL, resolved by the AI SDK gateway).
@@ -59,6 +70,7 @@ const getImageTextArgs = (
   const visionModel = getVisionModel(model);
   return visionModel ? {
   model: visionModel,
+  ...REASONING_PROVIDER_OPTIONS,
   messages: [{
     'role': 'user',
     'content': [
@@ -135,6 +147,7 @@ export const generateOpenAiImageObjectQuery = async <T extends z.ZodSchema>(
   const run = async (q: string): Promise<z.infer<T>> => {
     const { output } = await generateText({
       model: visionModel,
+      ...REASONING_PROVIDER_OPTIONS,
       output: Output.object({ schema }),
       messages: [{
         'role': 'user',
@@ -158,7 +171,8 @@ export const generateOpenAiImageObjectQuery = async <T extends z.ZodSchema>(
     return run(
       `${query}\n\nRespond ONLY with valid JSON matching the schema. ` +
       `"tags" must be an array of ${AI_TAGS_MIN}-${AI_TAGS_MAX} specific, ` +
-      'non-generic keywords.',
+      'non-generic keywords. Include the Simplified-Chinese "*_zh" siblings ' +
+      '(title_zh, caption_zh, tags_zh, semantic_zh); tags_zh aligned to tags.',
     );
   }
 };
@@ -170,6 +184,7 @@ export const testOpenAiConnection = async (model?: LanguageModel) => {
   if (visionModel) {
     return generateText({
       model: visionModel,
+      ...REASONING_PROVIDER_OPTIONS,
       messages: [{
         'role': 'user',
         'content': [

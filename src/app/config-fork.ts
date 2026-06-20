@@ -35,6 +35,14 @@ export const AI_MODEL = process.env.AI_MODEL || 'openai/gpt-4o';
 export const AI_MODEL_FALLBACK = process.env.AI_MODEL_FALLBACK;
 export const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;
 
+// Optional reasoning-effort hint for GPT-5-family reasoning models on the
+// OpenAI-compatible path. OPT-IN (unset → param omitted → upstream behavior):
+// reasoning models otherwise spend the whole output budget on reasoning tokens,
+// making the structured photo-tagging query ~40x slower (measured 133s → 3.4s
+// at 'low' on gpt-5.5-standard). Only sent for the openai-compatible provider,
+// so it never reaches a non-reasoning model that would reject it.
+export const AI_REASONING_EFFORT = process.env.AI_REASONING_EFFORT;
+
 // AI is enabled by either a direct OpenAI key OR an AI Gateway key. (Upstream's
 // AI_CONTENT_GENERATION_ENABLED keys only on OPENAI_SECRET_KEY; this fork-only
 // flag also accepts the gateway. Consumers that need gateway-only enablement

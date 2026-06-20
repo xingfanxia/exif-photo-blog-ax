@@ -15,6 +15,7 @@ import { AdminData } from '@/admin/actions';
 import { RecipeProps } from '@/recipe';
 import { getCountsForCategoriesCachedAction } from '@/category/actions';
 import { SWRKey } from '@/swr';
+import { ContentLanguage } from '@/app/content-language';
 
 export type AppStateContextType = {
   // CORE
@@ -61,6 +62,9 @@ export type AppStateContextType = {
   uploadState: UploadState
   setUploadState?: (uploadState: Partial<UploadState>) => void
   resetUploadState?: () => void
+  // CONTENT LANGUAGE (FORK) — toggles bilingual photo fields (en ↔ zh)
+  contentLanguage?: ContentLanguage
+  setContentLanguage?: Dispatch<SetStateAction<ContentLanguage>>
   // DEBUG
   areAdminDebugToolsEnabled?: boolean
   isGridHighDensity?: boolean

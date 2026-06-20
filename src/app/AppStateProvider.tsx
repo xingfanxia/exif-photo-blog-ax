@@ -20,6 +20,13 @@ import {
 } from '@/app/config';
 import { ShareModalProps } from '@/share';
 import { storeTimezoneCookie } from '@/utility/timezone';
+import { getCookie, storeCookie } from '@/utility/cookie';
+import {
+  ContentLanguage,
+  CONTENT_LANGUAGE_COOKIE,
+  DEFAULT_CONTENT_LANGUAGE,
+  parseContentLanguage,
+} from '@/app/content-language';
 import { AdminData, getAdminDataAction } from '@/admin/actions';
 import {
   storeAuthEmailCookie,
@@ -100,6 +107,10 @@ export default function AppStateProvider({
   // UPLOAD
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, _setUploadState] = useState(INITIAL_UPLOAD_STATE);
+  // CONTENT LANGUAGE (FORK) — seeded from the constant so SSR === first client
+  // render (no hydration mismatch); synced from the cookie on mount below.
+  const [contentLanguage, setContentLanguage] =
+    useState<ContentLanguage>(DEFAULT_CONTENT_LANGUAGE);
   // DEBUG
   const [isGridHighDensity, setIsGridHighDensity] =
     useState(HIGH_DENSITY_GRID);
@@ -120,6 +131,10 @@ export default function AppStateProvider({
     storeTimezoneCookie();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserEmailEager(getAuthEmailCookie());
+    // FORK: sync the content-language toggle from its cookie on mount.
+    const cookieLang = getCookie(CONTENT_LANGUAGE_COOKIE);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (cookieLang) { setContentLanguage(parseContentLanguage(cookieLang)); }
     // Capture backup timezone on client
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     if (IS_PRODUCTION) { warmRedisAction(); }
@@ -128,6 +143,11 @@ export default function AppStateProvider({
     }, 1000);
     return () => clearTimeout(timeout);
   }, []);
+
+  // FORK: persist the toggle so server surfaces (metadata / RSS) can read it.
+  useEffect(() => {
+    storeCookie(CONTENT_LANGUAGE_COOKIE, contentLanguage);
+  }, [contentLanguage]);
 
   const { mutate } = useSWRConfig();
   const invalidateSwr = useCallback((key?: SWRKey, revalidate?: boolean) => {
@@ -268,6 +288,8 @@ export default function AppStateProvider({
         resetUploadState,
         // DEBUG
         areAdminDebugToolsEnabled,
+        contentLanguage,
+        setContentLanguage,
         isGridHighDensity,
         setIsGridHighDensity,
         areZoomControlsShown,

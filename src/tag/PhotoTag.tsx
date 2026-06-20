@@ -13,10 +13,13 @@ import AdminTagMenu from './AdminTagMenu';
 export default function PhotoTag({
   tag,
   showAdminMenu,
+  // FORK: localized display label (e.g. zh); routing/slug stays on `tag`.
+  displayLabel,
   ...props
 }: {
   tag: string
   showAdminMenu?: boolean
+  displayLabel?: string
 } & EntityLinkExternalProps) {
   const { getTagCount } = useCategoryCounts();
   const { isUserSignedIn } = useAppState();
@@ -24,7 +27,7 @@ export default function PhotoTag({
   return (
     <EntityLink
       {...props}
-      label={formatTag(tag)}
+      label={displayLabel || formatTag(tag)}
       path={pathForTag(tag)}
       hoverQueryOptions={{ tag }}
       icon={<IconTag size={14} className="translate-x-[0.5px]" />}

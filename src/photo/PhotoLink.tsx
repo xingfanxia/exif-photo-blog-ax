@@ -31,7 +31,7 @@ export default function PhotoLink({
   children?: ReactNode
   loaderType?: 'spinner' | 'badge'
 } & PhotoSetCategory) {
-  const { setNextPhotoAnimation } = useAppState();
+  const { setNextPhotoAnimation, contentLanguage } = useAppState();
 
   const linkProps:
     Omit<ComponentProps<typeof LinkWithStatus>, 'children'> |
@@ -51,7 +51,7 @@ export default function PhotoLink({
       : undefined;
 
   const children = photo
-    ? (_children ?? titleForPhoto(photo))
+    ? (_children ?? titleForPhoto(photo, true, undefined, contentLanguage))
     : _children;
 
   return (

@@ -25,6 +25,11 @@ export const generateAiImageQueries = async ({
   caption?: string
   tags?: string
   semantic?: string
+  // FORK: bilingual (Simplified-Chinese) siblings; tags as CSV like `tags`.
+  titleZh?: string
+  captionZh?: string
+  tagsZh?: string
+  semanticZh?: string
   error?: string
 }> => {
   if (imageBase64) {
@@ -34,9 +39,9 @@ export const generateAiImageQueries = async ({
         existingTitle,
         uniqueTags,
       );
-      // The object query now returns tags as a normalized string[] (PLOG-9);
-      // re-join to the CSV string this function's callers expect.
-      const { tags, ...rest } = await generateOpenAiImageObjectQuery(
+      // The object query returns tags as normalized string[] (PLOG-9); re-join
+      // to the CSV string callers expect. zh siblings mirror their en field.
+      const r = await generateOpenAiImageObjectQuery(
         imageBase64,
         query,
         schema,
@@ -46,10 +51,20 @@ export const generateAiImageQueries = async ({
         caption?: string
         tags?: string[]
         semantic?: string
+        title_zh?: string | null
+        caption_zh?: string | null
+        tags_zh?: string[] | null
+        semantic_zh?: string | null
       };
       return {
-        ...rest,
-        ...(tags && { tags: tags.join(', ') }),
+        ...(r.title && { title: r.title }),
+        ...(r.caption && { caption: r.caption }),
+        ...(r.tags && { tags: r.tags.join(', ') }),
+        ...(r.semantic && { semantic: r.semantic }),
+        ...(r.title_zh && { titleZh: r.title_zh }),
+        ...(r.caption_zh && { captionZh: r.caption_zh }),
+        ...(r.tags_zh && { tagsZh: r.tags_zh.join(', ') }),
+        ...(r.semantic_zh && { semanticZh: r.semantic_zh }),
       };
     } catch (e: any) {
       return {
@@ -81,6 +96,10 @@ export const addAiTextToFormData = async ({
     caption: aiCaption,
     tags: aiTags,
     semantic,
+    titleZh,
+    captionZh,
+    tagsZh,
+    semanticZh,
   } = await generateAiImageQueries({
     imageBase64,
     textFieldsToGenerate: getAiTextFieldsToGenerate(
@@ -99,5 +118,10 @@ export const addAiTextToFormData = async ({
     caption: formData?.caption || aiCaption,
     tags: formData?.tags || aiTags,
     semanticDescription: semantic,
+    // FORK: bilingual siblings (no existing-value guard — these are new fields).
+    titleZh,
+    captionZh,
+    tagsZh,
+    semanticDescriptionZh: semanticZh,
   };
 };
