@@ -25,6 +25,8 @@ export interface EntityLinkExternalProps {
   className?: string
   truncate?: boolean
   hoverCount?: number
+  // FORK: render the count as a persistent badge (not hover-only).
+  alwaysShowCount?: boolean
   hoverType?: 'auto' | 'text' | 'image' | 'none'
   hoverQueryOptions?: PhotoQueryOptions
 }
@@ -44,6 +46,7 @@ export default function EntityLink({
   path = '', // Make link optional for debugging purposes
   pathTarget,
   hoverCount = 0,
+  alwaysShowCount,
   hoverType = 'auto',
   hoverQueryOptions,
   prefetch,
@@ -104,7 +107,7 @@ export default function EntityLink({
     );
 
   const showHoverText =
-    canShowHover && (
+    canShowHover && !alwaysShowCount && (
       (hoverType === 'auto' && !SHOW_CATEGORY_IMAGE_HOVERS) ||
       hoverType === 'text'
     );
@@ -212,6 +215,15 @@ export default function EntityLink({
         </span>}
       {showHoverText &&
         <span className="hidden peer-hover:inline text-dim">
+          {hoverCount}
+        </span>}
+      {/* FORK: persistent per-item count badge (always shown, not on hover) */}
+      {alwaysShowCount && hoverCount > 0 &&
+        <span className={clsx(
+          'shrink-0 tabular-nums text-dim',
+          'text-[10px] leading-none px-1.5 py-[3px] rounded-full',
+          'bg-gray-100 dark:bg-gray-800/60',
+        )}>
           {hoverCount}
         </span>}
       {isLoading && !suppressSpinner &&

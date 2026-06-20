@@ -422,7 +422,7 @@ export default function CommandKClient({
                   )}
                   aria-label={formatCountDescriptive(count)}
                 >
-                  <span aria-hidden>{count}</span>
+                  <span aria-hidden="true">{count}</span>
                 </span>
                 {isTagFavs(tag) &&
                   <IconFavs

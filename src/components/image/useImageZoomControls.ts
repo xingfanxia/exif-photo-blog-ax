@@ -25,8 +25,6 @@ export default function useImageZoomControls({
 
   const { setShouldRespondToKeyboardCommands } = useAppState();
 
-  const [zoomLevel, setZoomLevel] = useState(1);
-
   const [colorLight, setColorLight] = useState<string>();
 
   useMetaThemeColor({ colorLight });
@@ -39,11 +37,6 @@ export default function useImageZoomControls({
 
   const zoomTo = useCallback((zoomLevel = 1) =>
     viewerRef.current?.zoomTo(zoomLevel), []);
-
-  const reset = useCallback(() => {
-    setZoomLevel(1);
-    viewerRef.current?.reset();
-  }, []);
 
   useEffect(() => {
     if (isEnabled) {
@@ -83,9 +76,6 @@ export default function useImageZoomControls({
           hidden: () => {
             setShouldRespondToKeyboardCommands?.(true);
           },
-          zoom: ({ detail: { ratio } }) => {
-            setZoomLevel(ratio);
-          },
         });
         return () => {
           viewerRef.current?.destroy();
@@ -104,9 +94,7 @@ export default function useImageZoomControls({
   return {
     open,
     close,
-    reset,
     zoomTo,
-    zoomLevel,
     refViewerContainer,
   };
 }

@@ -39,9 +39,9 @@ export default function ZoomControls({
     if (ref) { ref.current = { open, zoomTo }; }
   }, [ref, open, zoomTo]);
 
-  // FORK: jump the fullscreen viewer to 100% — true actual-pixel detail of the
-  // R2 original (viewerjs ratio 1 = natural size). The toolbar's "1:1" control
-  // only resets to FIT, so this is the only way to inspect real detail.
+  // FORK: jump the fullscreen viewer to 100% — actual-pixel detail of the R2
+  // original (viewerjs ratio 1 = natural size). The toolbar's "1:1" only resets
+  // to FIT, so this button is the only way to inspect real detail.
   const button =
     <button
       type="button"
