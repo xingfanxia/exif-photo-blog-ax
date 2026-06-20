@@ -2,7 +2,7 @@ import clsx from 'clsx/lite';
 import { ReactNode, RefObject, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import useImageZoomControls from './useImageZoomControls';
-import { RiCollapseDiagonalLine, RiExpandDiagonalLine } from 'react-icons/ri';
+import { RiExpandDiagonalLine } from 'react-icons/ri';
 
 export type ZoomControlsRef = {
   open: () => void
@@ -28,9 +28,7 @@ export default function ZoomControls({
 
   const {
     open,
-    reset,
     zoomTo,
-    zoomLevel,
     refViewerContainer,
   } = useImageZoomControls({
     refImageContainer,
@@ -41,22 +39,24 @@ export default function ZoomControls({
     if (ref) { ref.current = { open, zoomTo }; }
   }, [ref, open, zoomTo]);
 
-  const shouldZoomTo2x = zoomLevel !== 2;
-
-  const button = 
+  // FORK: jump the fullscreen viewer to 100% — actual-pixel detail of the R2
+  // original (viewerjs ratio 1 = natural size). The toolbar's "1:1" only resets
+  // to FIT, so this button is the only way to inspect real detail.
+  const button =
     <button
       type="button"
+      aria-label="100%"
       className={clsx(
         'fixed top-[20px] right-[70px]',
-        'size-10 items-center justify-center',
-        'rounded-full border-none',
-        'text-white bg-black/50 hover:bg-black/85',
+        'h-10 px-3.5 flex items-center justify-center gap-1.5',
+        'rounded-full border-none cursor-pointer',
+        'text-white text-[13px] font-medium tabular-nums',
+        'bg-black/50 hover:bg-black/85',
       )}
-      onClick={() => shouldZoomTo2x ? zoomTo(2) : reset()}
+      onClick={() => zoomTo(1)}
     >
-      {shouldZoomTo2x
-        ? <RiCollapseDiagonalLine className="shrink-0" size={20} />
-        : <RiExpandDiagonalLine className="shrink-0" size={20} />}
+      <RiExpandDiagonalLine className="shrink-0" size={16} />
+      100%
     </button>;
 
   return (

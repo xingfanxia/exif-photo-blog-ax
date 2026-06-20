@@ -15,10 +15,8 @@ import PhotoFavs from '../tag/PhotoFavs';
 import { useAppState } from '@/app/AppState';
 import { useMemo, useRef } from 'react';
 import PhotoPrivate from '@/tag/PhotoPrivate';
-import {
-  CATEGORY_VISIBILITY,
-  HIDE_TAGS_WITH_ONE_PHOTO,
-} from '@/app/config';
+import { CATEGORY_VISIBILITY } from '@/app/config';
+import { zhForSlug } from '@/photo/ai/tagVocabulary';
 import { clsx } from 'clsx/lite';
 import PhotoRecipe from '@/recipe/PhotoRecipe';
 import IconCamera from '@/components/icons/IconCamera';
@@ -45,6 +43,11 @@ import PhotoAlbum from '@/album/PhotoAlbum';
 const APPROXIMATE_ITEM_HEIGHT = 40;
 const ABOUT_HEIGHT_OFFSET = 24;
 
+// FORK: hide tags with fewer than this many photos from the sidebar, so it
+// shows clustered facet tags rather than subject singletons (favs/private are
+// exempt in limitTagsByCount).
+const MIN_TAG_COUNT = 3;
+
 export default function PhotoGridSidebar({
   photosCount,
   containerHeight,
@@ -59,13 +62,10 @@ export default function PhotoGridSidebar({
   aboutTextHasBrParagraphBreaks?: boolean
   className?: string
 }) {
-  const categories = useMemo(() => HIDE_TAGS_WITH_ONE_PHOTO
-    ? {
-      ..._categories,
-      tags: limitTagsByCount(_categories.tags, 2),
-    }
-    : _categories
-  , [_categories]);
+  const categories = useMemo(() => ({
+    ..._categories,
+    tags: limitTagsByCount(_categories.tags, MIN_TAG_COUNT),
+  }), [_categories]);
 
   const {
     recents,
@@ -102,7 +102,7 @@ export default function PhotoGridSidebar({
     )
     : undefined;
 
-  const { photosCountHidden } = useAppState();
+  const { photosCountHidden, contentLanguage } = useAppState();
 
   const tagsIncludingHidden = useMemo(() =>
     addPrivateToTags(tags, photosCountHidden)
@@ -250,7 +250,13 @@ export default function PhotoGridSidebar({
               return <PhotoTag
                 key={tag}
                 tag={tag}
+                // FORK: zh label for facet tags on the 中 toggle; en slug
+                // otherwise. Plus a persistent count badge (not hover-only).
+                displayLabel={contentLanguage === 'zh'
+                  ? zhForSlug(tag)
+                  : undefined}
                 hoverCount={count}
+                alwaysShowCount
                 type="text-only"
                 prefetch={false}
                 contrast="low"
