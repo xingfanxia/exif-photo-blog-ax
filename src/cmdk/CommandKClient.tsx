@@ -191,6 +191,7 @@ export default function CommandKClient({
     setShouldDebugImageFallbacks,
     setShouldDebugInsights,
     setShouldDebugRecipeOverlays,
+    contentLanguage,
   } = useAppState();
 
   const {
@@ -290,7 +291,7 @@ export default function CommandKClient({
         heading: 'Photos',
         accessory: <IconPhoto size={14} />,
         items: photos.map(photo => ({
-          label: titleForPhoto(photo),
+          label: titleForPhoto(photo, true, undefined, contentLanguage),
           keywords: getKeywordsForPhoto(photo),
           annotation: <PhotoDate {...{ photo, timezone: undefined }} />,
           accessory: <PhotoSmall photo={photo} />,
