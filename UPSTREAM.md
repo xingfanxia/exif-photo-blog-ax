@@ -246,3 +246,24 @@ reconcile cost; the EDITs below are small, additive hooks into upstream files.
 | `scripts/ai-backfill/index.ts` | EDIT (fork-NEW PLOG-10) | Persist `_zh` columns; prompt version → `v2-facets`; fetch R2 `md` variant directly (not `/_next/image`). | None (fork-owned). |
 
 **Verified:** jest 24 suites/118 tests, build exit 0, browser (desktop+iPhone), 51 photos re-tagged (`done: 51`).
+
+### Photo-ops tooling — headless upload / dedup / color worker (branch `ax/overhaul`)
+
+Standalone CLI workers that run OUTSIDE Next (ts-node via `tsconfig.scripts.json`,
+same `node --env-file=.env.local -r ts-node/register -r tsconfig-paths/register`
+bootstrap as `db:migrate` / `ai:backfill`). They cannot call
+`revalidatePath`/`revalidateTag`, so freshly-inserted rows only appear on the
+public site after the admin **Clear cache** (清除缓存) button (admin nav; surfaced
+at `/admin/insights`, also documented upstream at `/admin/configuration`).
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `scripts/batch-upload/index.ts` | NEW | Headless batch-upload worker (`npm run batch:upload -- <dir>`): R2 upload + sm/md/lg variants → EXIF → bilingual AI → DB insert. **Has NO dedup** — pointed at a folder already in the DB it duplicates every file; stage only genuinely-new files (run `batch:dedup` first). Deliberately skips color extraction (run `backfill:color` after). | None (additive). |
+| `scripts/batch-upload/dedup-check.ts` | NEW | Idempotent pre-upload audit (`npm run batch:dedup -- <image-dir>`): fingerprints each local file by EXIF DateTimeOriginal **wall-clock string** + camera model vs DB `taken_at_naive` (raw wall-clock match dodges the exifr-`Date` timezone artifact); prints dup vs new, moves nothing. | None (additive). |
+| `scripts/backfill-color/index.ts` | NEW | Self-contained color-extraction backfill (`npm run backfill:color`); pairs with `batch:upload`, which skips color on purpose. | None (additive). |
+| `package.json` | EDIT | Added `batch:upload`, `batch:dedup`, `backfill:color` scripts (same ts-node + `tsconfig.scripts.json` runner as `db:migrate`/`ai:backfill`). | Re-add. |
+
+**Verified (batch run, 2026-06-21):** 51→71 photos inserted; `batch:dedup`
+re-confirmed 71 dup / 0 new immediately post-upload. End-to-end recipe (the
+non-obvious staging + cache-clear steps) lives in project memory
+`adding-new-photos-workflow`.

@@ -7,6 +7,15 @@
 // Run:
 //   npm run batch:upload -- <image-dir> [maxCount]
 // e.g. npm run batch:upload -- ~/Pictures/Portofolio 3   # first 3 only
+//
+// ⚠️ NO DEDUP: this inserts EVERY image in <dir>. Pointed at a folder that
+// overlaps the DB it duplicates those photos. First audit + stage only the
+// NEW files (e.g. into a separate dir):
+//   npm run batch:dedup -- <image-dir>   # lists NEW (safe) vs DUP (skip)
+//
+// ⚠️ CACHE: runs OUTSIDE Next, so it cannot revalidate. New photos do NOT
+// appear on the public site until an admin clicks "Clear cache" (清除缓存)
+// in the admin nav (/admin/insights). Then run `npm run backfill:color`.
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, extname, basename } from 'path';
 import { pool } from '@/platforms/postgres';
