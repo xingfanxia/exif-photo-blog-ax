@@ -23,7 +23,9 @@ import { tagDisplayRank } from '@/photo/ai/tagVocabulary';
 export const TAG_FAVS     = 'favs';
 export const TAG_PRIVATE  = 'private';
 
-type TagWithMeta = { tag: string } & CategoryQueryMeta;
+// FORK: tagZh = the tag's localized (zh) display label, surfaced by
+// getUniqueTags (vocabulary zh for facets, model zh for free-form subjects).
+type TagWithMeta = { tag: string, tagZh?: string } & CategoryQueryMeta;
 
 export type Tags = TagWithMeta[]
 
