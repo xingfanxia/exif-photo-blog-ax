@@ -307,19 +307,29 @@ export const getUniqueLenses = async () =>
   , 'getUniqueLenses');
 
 export const getUniqueTags = async (includeHidden?: boolean) =>
+  // FORK: also surface each tag's zh label by zipping tags + tags_zh (parallel
+  // unnest, NULL-padded). Facet tags carry their vocabulary zh; free-form
+  // subject tags carry the model-generated zh — so the sidebar/⌘K can localize
+  // EVERY tag on the 中 toggle, not just the controlled vocabulary.
   safelyQuery(() => query(`
-    SELECT DISTINCT unnest(tags) as tag,
+    SELECT t.tag,
       COUNT(*),
-      MAX(updated_at) as last_modified
-    FROM photos
-    ${includeHidden ? '' : 'WHERE hidden IS NOT TRUE'}
-    GROUP BY tag
-    ORDER BY tag ASC
-  `).then(({ rows }): Tags => rows.map(({ tag, count, last_modified }) => ({
-    tag,
-    count: parseInt(count, 10),
-    lastModified: last_modified as Date,
-  })))
+      MAX(p.updated_at) as last_modified,
+      MAX(t.tag_zh) as tag_zh
+    FROM photos p
+      CROSS JOIN LATERAL unnest(
+        p.tags, COALESCE(p.tags_zh, '{}'::varchar[])
+      ) AS t(tag, tag_zh)
+    ${includeHidden ? '' : 'WHERE p.hidden IS NOT TRUE'}
+    GROUP BY t.tag
+    ORDER BY t.tag ASC
+  `).then(({ rows }): Tags =>
+    rows.map(({ tag, count, last_modified, tag_zh }) => ({
+      tag,
+      count: parseInt(count, 10),
+      lastModified: last_modified as Date,
+      ...(tag_zh && tag_zh !== tag && { tagZh: tag_zh as string }),
+    })))
   , 'getUniqueTags');
 
 export const getUniqueRecipes = async () =>

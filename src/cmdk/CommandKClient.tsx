@@ -404,14 +404,14 @@ export default function CommandKClient({
               size={13}
               className="translate-x-[1px] translate-y-[0.75px]"
             />,
-            items: tags.map(({ tag, count }) => ({
+            items: tags.map(({ tag, count, tagZh }) => ({
               explicitKey: formatTag(tag),
               label: <span className="flex items-center gap-[7px]">
-                {/* FORK: zh label for facet tags (zhForSlug), en slug
-                    otherwise. Reserved favs/private keep their en form. */}
+                {/* FORK: zh label — vocabulary zh for facets, model zh (tagZh)
+                    for subjects; en slug if neither. Favs/private stay en. */}
                 {contentLanguage === 'zh'
                   && !isTagFavs(tag) && !isTagPrivate(tag)
-                  ? zhForSlug(tag) ?? formatTag(tag)
+                  ? zhForSlug(tag) ?? tagZh ?? formatTag(tag)
                   : formatTag(tag)}
                 {/* FORK: inline per-tag count badge */}
                 <span

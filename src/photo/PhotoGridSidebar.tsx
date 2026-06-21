@@ -227,7 +227,7 @@ export default function PhotoGridSidebar({
       />}
       maxItems={maxItemsPerCategory}
       items={tagsIncludingHidden
-        .map(({ tag, count }) => {
+        .map(({ tag, count, tagZh }) => {
           switch (tag) {
             case TAG_FAVS:
               return <PhotoFavs
@@ -250,10 +250,11 @@ export default function PhotoGridSidebar({
               return <PhotoTag
                 key={tag}
                 tag={tag}
-                // FORK: zh label for facet tags on the 中 toggle; en slug
-                // otherwise. Plus a persistent count badge (not hover-only).
+                // FORK: zh label on the 中 toggle — vocabulary zh for facet
+                // tags, model zh (tagZh) for free-form subject tags; en slug
+                // if neither. Plus a persistent count badge (not hover-only).
                 displayLabel={contentLanguage === 'zh'
-                  ? zhForSlug(tag)
+                  ? zhForSlug(tag) ?? tagZh
                   : undefined}
                 hoverCount={count}
                 alwaysShowCount
