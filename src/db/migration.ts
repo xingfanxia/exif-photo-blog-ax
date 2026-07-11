@@ -1,141 +1,18 @@
-import { query, sql } from '@/platforms/postgres';
+import { query, sql } from '@/platforms/db';
 
 interface Migration {
   label: string
   table?: 'photos' | 'albums'
   fields: string[]
-  run: () => ReturnType<typeof sql>
+  run: () => ReturnType<typeof sql> | ReturnType<typeof query>
 }
 
-export const MIGRATIONS: Migration[] = [{
-  label: '01: AI Text Generation',
-  fields: ['caption', 'semantic_description'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS caption TEXT,
-    ADD COLUMN IF NOT EXISTS semantic_description TEXT
-  `,
-}, {
-  label: '02: Lens Metadata',
-  fields: ['lens_make', 'lens_model'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS lens_make VARCHAR(255),
-    ADD COLUMN IF NOT EXISTS lens_model VARCHAR(255)
-  `,
-}, {
-  label: '03: Fujifilm Recipe: Data',
-  fields: ['recipe_data'],
-  run: () => sql`
-    DO $$
-    BEGIN
-      IF EXISTS(
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_name='photos'
-        AND column_name='fujifilm_recipe'
-      )
-      THEN
-        ALTER TABLE photos
-        RENAME COLUMN fujifilm_recipe TO recipe_data;
-      ELSE
-        ALTER TABLE photos
-        ADD COLUMN IF NOT EXISTS recipe_data JSONB;
-      END IF;
-    END $$;
-  `,
-}, {
-  label: '04: Fujifilm Recipe: Title',
-  fields: ['recipe_title'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS recipe_title VARCHAR(255)
-  `,
-}, {
-  label: '05: Universal Film',
-  fields: ['film'],
-  run: () => sql`
-    DO $$
-    BEGIN
-      IF EXISTS(
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_name='photos'
-        AND column_name='film_simulation'
-      )
-      THEN
-        ALTER TABLE photos
-        RENAME COLUMN film_simulation TO film;
-      ELSE
-        ALTER TABLE photos
-        ADD COLUMN IF NOT EXISTS film VARCHAR(255);
-      END IF;
-    END $$;
-  `,
-}, {
-  label: '06: Exclude from feeds',
-  fields: ['exclude_from_feeds'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS exclude_from_feeds BOOLEAN DEFAULT FALSE
-  `,
-}, {
-  label: '07: Color Data',
-  fields: ['color_data', 'color_sort'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS color_data JSONB,
-    ADD COLUMN IF NOT EXISTS color_sort SMALLINT
-  `,
-}, {
-  label: '08: Location',
-  table: 'albums',
-  fields: ['location'],
-  // `query()` seemingly required to execute
-  // ADD and DROP column alteration in same migration
-  run: () => query(`
-    ALTER TABLE albums
-    ADD COLUMN IF NOT EXISTS location JSONB;
-    ALTER TABLE albums
-    DROP COLUMN IF EXISTS location_name,
-    DROP COLUMN IF EXISTS latitude,
-    DROP COLUMN IF EXISTS longitude;
-  `),
-}, {
-  label: '09: Image Dimensions',
-  fields: ['width', 'height'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS width INTEGER,
-    ADD COLUMN IF NOT EXISTS height INTEGER
-  `,
-}, {
-  label: '10: ISO',
-  fields: ['iso'],
-  run: () => query(`
-    ALTER TABLE photos
-    ALTER COLUMN iso TYPE INTEGER
-  `),
-}, {
-  // PLOG-10: idempotency columns for the batch AI backfill worker.
-  label: '11: AI Backfill Idempotency',
-  fields: ['metadata_status', 'input_hash'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS metadata_status TEXT,
-    ADD COLUMN IF NOT EXISTS input_hash TEXT
-  `,
-}, {
-  // FORK: bilingual (Simplified-Chinese) siblings of the AI text fields.
-  // Nullable → instant metadata-only ALTER, no backfill. Display falls back to
-  // the canonical English columns when a zh value is absent.
-  label: '12: Bilingual (zh) Text',
-  fields: ['title_zh', 'caption_zh', 'semantic_description_zh', 'tags_zh'],
-  run: () => sql`
-    ALTER TABLE photos
-    ADD COLUMN IF NOT EXISTS title_zh TEXT,
-    ADD COLUMN IF NOT EXISTS caption_zh TEXT,
-    ADD COLUMN IF NOT EXISTS semantic_description_zh TEXT,
-    ADD COLUMN IF NOT EXISTS tags_zh VARCHAR(255)[]
-  `,
-}];
+// TURSO-1 (2026-07-11): the Turso (libSQL) database was created FRESH from the
+// full current schema — `createPhotosTable` et al. fold in every column the
+// historical Postgres migrations 01–12 used to add — so the ledger starts
+// empty. Future schema changes append entries here exactly as before (each
+// individually idempotent, SQLite dialect: `ALTER TABLE … ADD COLUMN` — note
+// SQLite has no `ADD COLUMN IF NOT EXISTS`; the schema_migrations ledger is
+// what makes re-runs safe). Labels are immutable identifiers — never edit a
+// shipped label or it will re-run under a new identity.
+export const MIGRATIONS: Migration[] = [];

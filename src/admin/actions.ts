@@ -3,7 +3,7 @@
 import { runAuthenticatedAdminServerAction } from '@/auth/server';
 import { testRedisConnection } from '@/platforms/redis';
 import { testOpenAiConnection } from '@/platforms/ai';
-import { testDatabaseConnection } from '@/platforms/postgres';
+import { testDatabaseConnection } from '@/platforms/db';
 import { testStorageConnection } from '@/platforms/storage';
 import { testGooglePlacesConnection } from '@/platforms/google-places';
 import { APP_CONFIGURATION } from '@/app/config';

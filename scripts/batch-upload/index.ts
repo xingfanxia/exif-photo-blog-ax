@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 // Headless batch upload — mirrors the addUpload server flow (src/photo/
 // actions.ts) for a local directory of images, with bilingual (en+zh) AI.
 // Per file: putFile(original) → EXIF/blur/resized → bilingual AI →
@@ -9,7 +9,7 @@
 // e.g. npm run batch:upload -- ~/Pictures/Portofolio 3   # first 3 only
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, extname, basename } from 'path';
-import { pool } from '@/platforms/postgres';
+import { closeDb } from '@/platforms/db';
 import { runMigrations } from '@/db/migrate';
 import { putFile } from '@/platforms/storage';
 import {
@@ -114,8 +114,8 @@ const processFile = async (filePath: string, uniqueTags: Tags) => {
 };
 
 const main = async () => {
-  if (!process.env.POSTGRES_URL) {
-    console.error('POSTGRES_URL is not set — load .env.local first.');
+  if (!process.env.TURSO_DATABASE_URL) {
+    console.error('TURSO_DATABASE_URL is not set — load .env.local first.');
     process.exit(1);
   }
   const dir = process.argv[2];
@@ -159,7 +159,7 @@ const main = async () => {
     console.log(`\nDone: ${ok}/${files.length} inserted, ` +
       `${files.length - ok} failed.`);
   } finally {
-    await pool.end().catch(() => {});
+    closeDb();
   }
 };
 

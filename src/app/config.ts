@@ -159,11 +159,9 @@ export const ABOUT_DESCRIPTION_DEFAULT =
 
 // STORAGE
 
-// STORAGE: DATABASE
+// STORAGE: DATABASE (Turso libSQL since TURSO-1)
 export const HAS_DATABASE =
-  Boolean(process.env.POSTGRES_URL);
-export const POSTGRES_SSL_ENABLED =
-  process.env.DISABLE_POSTGRES_SSL === '1' ? false : true;
+  Boolean(process.env.TURSO_DATABASE_URL);
 
 // STORAGE: REDIS
 export const REDIS_URL = normalizeRedisUrl(
@@ -424,7 +422,6 @@ export const ADMIN_STORAGE_DEBUG_ENABLED =
 export const APP_CONFIGURATION = {
   // Storage
   hasDatabase: HAS_DATABASE,
-  isPostgresSslEnabled: POSTGRES_SSL_ENABLED,
   hasRedisStorage: HAS_REDIS_STORAGE,
   hasVercelBlobStorage: HAS_VERCEL_BLOB_STORAGE,
   hasCloudflareR2Storage: HAS_CLOUDFLARE_R2_STORAGE,

@@ -1,9 +1,9 @@
-/* eslint-disable no-console */
+ 
 // Backfill color_data / color_sort for photos missing it (e.g. uploaded by the
 // batch worker, which skipped color). Now that color extraction fetches the
 // image directly (no /_next/image), this works headless.
 //   npm run backfill:color
-import { pool } from '@/platforms/postgres';
+import { query, closeDb } from '@/platforms/db';
 import { getColorFieldsForPhotoDbInsert } from '@/photo/color/server';
 
 const CONCURRENCY = Number(process.env.BACKFILL_COLOR_CONCURRENCY ?? 4);
@@ -28,11 +28,11 @@ const mapWithLimit = async <T, R>(
 };
 
 const main = async () => {
-  if (!process.env.POSTGRES_URL) {
-    console.error('POSTGRES_URL is not set — load .env.local first.');
+  if (!process.env.TURSO_DATABASE_URL) {
+    console.error('TURSO_DATABASE_URL is not set — load .env.local first.');
     process.exit(1);
   }
-  const { rows } = await pool.query<{ id: string; url: string }>(
+  const { rows } = await query<{ id: string; url: string }>(
     'SELECT id, url FROM photos WHERE color_sort IS NULL',
   );
   console.log(`Backfilling color for ${rows.length} photo(s) ` +
@@ -44,7 +44,7 @@ const main = async () => {
       const fields = await getColorFieldsForPhotoDbInsert(url, undefined, true);
       done += 1;
       if (fields?.colorData !== undefined && fields?.colorSort !== undefined) {
-        await pool.query(
+        await query(
           'UPDATE photos SET color_data=$1, color_sort=$2 WHERE id=$3',
           [fields.colorData, fields.colorSort, id],
         );
@@ -60,7 +60,7 @@ const main = async () => {
     }
   });
   console.log(`\nDone: ${ok}/${rows.length} updated.`);
-  await pool.end().catch(() => {});
+  closeDb();
 };
 
 main();

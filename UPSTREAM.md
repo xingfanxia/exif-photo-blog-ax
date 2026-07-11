@@ -246,3 +246,40 @@ reconcile cost; the EDITs below are small, additive hooks into upstream files.
 | `scripts/ai-backfill/index.ts` | EDIT (fork-NEW PLOG-10) | Persist `_zh` columns; prompt version → `v2-facets`; fetch R2 `md` variant directly (not `/_next/image`). | None (fork-owned). |
 
 **Verified:** jest 24 suites/118 tests, build exit 0, browser (desktop+iPhone), 51 photos re-tagged (`done: 51`).
+
+### TURSO-1 — Supabase Postgres → Turso libSQL (branch `ax/turso-migration`)
+
+**This is the fork's largest deliberate divergence:** the database engine is now
+SQLite (Turso libSQL over HTTP hrana), while upstream remains Postgres. Any
+upstream change to query files must be re-dialected on merge — expect conflicts
+in every file below and resolve them in the fork's SQLite dialect. DB lives in
+`aws-ap-northeast-1` (Tokyo), co-located with the `vercel.json` `hnd1` pin.
+
+| File | Kind | What & why | Pull-reconcile note |
+|---|---|---|---|
+| `src/platforms/db.ts` | NEW | libSQL client (`@libsql/client/web`, lazy init, `libsql://`→`https:` for stateless HTTP). Keeps upstream's `query()`/`sql\`\`` surface; rewrites `$N`→`?N` at execute; revives dates/JSON/booleans at the row boundary by column name (pg did it by column type). | None (additive) — but it REPLACES `platforms/postgres.ts`. |
+| `src/platforms/postgres.ts` | DELETED | Superseded by `db.ts`. `pg` + `@types/pg` removed from package.json; `@libsql/client` added. | On upstream merge, re-delete; route new call sites to `@/platforms/db`. |
+| `src/photo/query.ts` | EDIT | SQLite dialect: full-schema `createPhotosTable` (migrations 01–12 folded in; TEXT/INTEGER/REAL types, ISO-text timestamps, JSON-text arrays, 0/1 booleans); tag ops via `json_each`/`json_group_array` (were ARRAY_REMOVE/REPLACE/array_cat+unnest); `getUniqueTags` zh-zip via `json_extract('$['\|\|key\|\|']')` (was LATERAL unnest); `strftime('%Y',…)` (was EXTRACT); explicit `COUNT(*) as count` aliases everywhere (pg lowercased them implicitly; the bare `['COUNT']` field relied on pg's `p.count`-as-`count(p)` quirk); `json_array_length` (was array_length). | Re-dialect any upstream query change. |
+| `src/db/index.ts` | EDIT | `parameterizeForDb` → inline nested `REPLACE(LOWER(TRIM(…)))` (no IMMUTABLE-fn wrapper needed in SQLite); ILIKE → `LOWER(…) LIKE`; INTERVAL/now() → `strftime('%Y-%m-%dT%H:%M:%fZ', …)` string comparisons; `EXTRACT(YEAR)` → CAST(strftime); tag containment → `EXISTS json_each`; `id=ANY()` → `IN (SELECT value FROM json_each(?))`; `convertArrayToPostgresString` → `convertArrayToJson`. | Re-dialect on merge. |
+| `src/db/migrate.ts` | EDIT | Dropped `pg_advisory_lock` (idempotent steps + SQLite writer serialization), pg_trgm extension + normalizer-fn DDL; ledger DDL → SQLite types. | Keep lock-free runner. |
+| `src/db/migration.ts` | EDIT | `MIGRATIONS[]` reset to `[]` — Turso DB created fresh from full base DDL. Future entries use SQLite `ALTER TABLE` (no `ADD COLUMN IF NOT EXISTS`; the ledger provides idempotency). | Do NOT re-add upstream's Postgres migrations. |
+| `src/db/indexes.ts` | EDIT | Kept partial/expression/plain btrees (SQLite supports all three); dropped GIN tags index + pg_trgm search index (no equivalent; ~70-row seq scans are sub-ms). | Re-dialect new upstream indexes. |
+| `src/db/query.ts` | EDIT | `safelyQuery` retry for Neon/Supabase "endpoint is in transition" removed; loud log + rethrow only. ParamBuilder unchanged (still emits `$N`; db.ts converts). | Keep. |
+| `src/app/config.ts` | EDIT (hot) | `HAS_DATABASE` keys off `TURSO_DATABASE_URL` (was POSTGRES_URL); `POSTGRES_SSL_ENABLED` + `isPostgresSslEnabled` removed. | Re-apply on merge. |
+| `src/admin/config/AdminAppConfigurationClient.tsx` | EDIT | Database checklist row says Turso (env-var hint), Postgres SSL clause dropped. | Re-apply. |
+| `src/about/query.ts` `src/album/query.ts` | EDIT | SQLite DDL (INTEGER PK / TEXT uuid via `crypto.randomUUID()` at insert — no gen_random_uuid); `unnest(tags)` → `json_each`; `CURRENT_TIMESTAMP` → strftime ISO (format consistency with `Date.toISOString()`). | Re-dialect. |
+| `scripts/{batch-upload,ai-backfill,backfill-color,db}/index|migrate.ts` | EDIT (fork-owned) | New client import, `TURSO_DATABASE_URL` env check, `closeDb()` (no pool), JSON arrays, strftime updated_at. | Fork-owned. |
+| `__tests__/migrate.test.ts` `__tests__/db-query.test.ts` | EDIT | Mocks target `@/platforms/db`; advisory-lock tests removed; tag-filter assertion → json_each form; asserts Postgres-only DDL is gone. | Fork-owned. |
+
+**Storage conventions (the contract `db.ts` enforces):** timestamps = ISO-8601
+UTC text (`Date.toISOString()` / `strftime('%Y-%m-%dT%H:%M:%fZ','now')` — the
+formats match so lexicographic comparison works); arrays + JSONB = JSON text
+(parse/stringify at the boundary); booleans = 0/1 (revived by column name:
+`hidden`, `exclude_from_feeds`). `taken_at_naive` stays a naive string.
+
+**Data migration:** one-off script (scratchpad, not committed) copied 70 photos
++ 1 about row from Supabase on 2026-07-11; counts verified. Supabase project is
+decommissioned after prod validation.
+
+**Verified:** jest 24 suites/116 tests, `next build` exit 0 (SSG over live
+Turso), local `next start` smoke (/, /grid, /tag/wildlife, /year/2025 → 200).

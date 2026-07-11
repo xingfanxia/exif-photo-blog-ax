@@ -2,8 +2,8 @@
 import {
   sql,
   query,
-} from '@/platforms/postgres';
-import { convertArrayToPostgresString } from '@/db';
+} from '@/platforms/db';
+import { convertArrayToJson } from '@/db';
 import {
   PhotoDb,
   PhotoDbInsert,
@@ -38,45 +38,58 @@ import { Years } from '@/year';
 import { PhotoColorData } from '@/photo/color/client';
 import { safelyQuery, ParamBuilder } from '@/db/query';
 
+// SQLite/libSQL schema (TURSO-1). This is the FULL current schema: the Turso
+// DB was created fresh from it, so the historical Postgres MIGRATIONS[] are
+// folded in (lens/recipe/film/color/zh columns, AI-backfill idempotency) and
+// the ledger starts empty. Storage conventions:
+//  - timestamps: ISO-8601 UTC text ('…T…Z'), revived to Date by @/platforms/db
+//  - arrays (tags, tags_zh) and JSONB (recipe_data, color_data): JSON text
+//  - booleans: 0/1 integers
 export const createPhotosTable = () =>
   sql`
     CREATE TABLE IF NOT EXISTS photos (
-      id VARCHAR(8) PRIMARY KEY,
-      url VARCHAR(255) NOT NULL,
-      extension VARCHAR(255) NOT NULL,
+      id TEXT PRIMARY KEY,
+      url TEXT NOT NULL,
+      extension TEXT NOT NULL,
       width INTEGER,
       height INTEGER,
       aspect_ratio REAL DEFAULT 1.5,
       blur_data TEXT,
-      title VARCHAR(255),
+      title TEXT,
+      title_zh TEXT,
       caption TEXT,
+      caption_zh TEXT,
       semantic_description TEXT,
-      tags VARCHAR(255)[],
-      make VARCHAR(255),
-      model VARCHAR(255),
-      focal_length SMALLINT,
-      focal_length_in_35mm_format SMALLINT,
-      lens_make VARCHAR(255),
-      lens_model VARCHAR(255),
+      semantic_description_zh TEXT,
+      tags TEXT,
+      tags_zh TEXT,
+      make TEXT,
+      model TEXT,
+      focal_length INTEGER,
+      focal_length_in_35mm_format INTEGER,
+      lens_make TEXT,
+      lens_model TEXT,
       f_number REAL,
       iso INTEGER,
-      exposure_time DOUBLE PRECISION,
+      exposure_time REAL,
       exposure_compensation REAL,
-      location_name VARCHAR(255),
-      latitude DOUBLE PRECISION,
-      longitude DOUBLE PRECISION,
-      film VARCHAR(255),
-      recipe_title VARCHAR(255),
-      recipe_data JSONB,
-      color_data JSONB,
-      color_sort SMALLINT,
+      location_name TEXT,
+      latitude REAL,
+      longitude REAL,
+      film TEXT,
+      recipe_title TEXT,
+      recipe_data TEXT,
+      color_data TEXT,
+      color_sort INTEGER,
       priority_order REAL,
-      taken_at TIMESTAMP WITH TIME ZONE NOT NULL,
-      taken_at_naive VARCHAR(255) NOT NULL,
-      exclude_from_feeds BOOLEAN DEFAULT FALSE,
-      hidden BOOLEAN DEFAULT FALSE,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      metadata_status TEXT,
+      input_hash TEXT,
+      taken_at TEXT NOT NULL,
+      taken_at_naive TEXT NOT NULL,
+      exclude_from_feeds INTEGER DEFAULT 0,
+      hidden INTEGER DEFAULT 0,
+      updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     )
   `;
 
@@ -136,8 +149,8 @@ export const insertPhoto = (photo: PhotoDbInsert) =>
       ${photo.captionZh},
       ${photo.semanticDescription},
       ${photo.semanticDescriptionZh},
-      ${convertArrayToPostgresString(photo.tags)},
-      ${convertArrayToPostgresString(photo.tagsZh)},
+      ${convertArrayToJson(photo.tags)},
+      ${convertArrayToJson(photo.tagsZh)},
       ${photo.make},
       ${photo.model},
       ${photo.focalLength},
@@ -179,8 +192,8 @@ export const updatePhoto = (photo: PhotoDbInsert) =>
       caption_zh=${photo.captionZh},
       semantic_description=${photo.semanticDescription},
       semantic_description_zh=${photo.semanticDescriptionZh},
-      tags=${convertArrayToPostgresString(photo.tags)},
-      tags_zh=${convertArrayToPostgresString(photo.tagsZh)},
+      tags=${convertArrayToJson(photo.tags)},
+      tags_zh=${convertArrayToJson(photo.tagsZh)},
       make=${photo.make},
       model=${photo.model},
       focal_length=${photo.focalLength},
@@ -211,30 +224,44 @@ export const updatePhoto = (photo: PhotoDbInsert) =>
 export const deletePhotoTagGlobally = (tag: string) =>
   safelyQuery(() => sql`
     UPDATE photos
-    SET tags=ARRAY_REMOVE(tags, ${tag})
-    WHERE ${tag}=ANY(tags)
+    SET tags=(
+      SELECT json_group_array(value)
+      FROM json_each(tags)
+      WHERE value <> ${tag}
+    )
+    WHERE EXISTS (
+      SELECT 1 FROM json_each(COALESCE(tags, '[]')) WHERE value = ${tag}
+    )
   `, 'deletePhotoTagGlobally');
 
 export const renamePhotoTagGlobally = (tag: string, updatedTag: string) =>
   safelyQuery(() => sql`
     UPDATE photos
-    SET tags=ARRAY_REPLACE(tags, ${tag}, ${updatedTag})
-    WHERE ${tag}=ANY(tags)
+    SET tags=(
+      SELECT json_group_array(
+        CASE WHEN value = ${tag} THEN ${updatedTag} ELSE value END
+      )
+      FROM json_each(tags)
+    )
+    WHERE EXISTS (
+      SELECT 1 FROM json_each(COALESCE(tags, '[]')) WHERE value = ${tag}
+    )
   `, 'renamePhotoTagGlobally');
 
 export const addTagsToPhotos = (tags: string[], photoIds: string[]) =>
   safelyQuery(() => query(`
-    UPDATE photos 
+    UPDATE photos
     SET tags = (
-      SELECT array_agg(DISTINCT elem)
-      FROM unnest(
-        array_cat(tags, $1)
-      ) AS elem
+      SELECT json_group_array(DISTINCT value) FROM (
+        SELECT value FROM json_each(COALESCE(tags, '[]'))
+        UNION
+        SELECT value FROM json_each($1)
+      )
     )
-    WHERE id = ANY($2)
+    WHERE id IN (SELECT value FROM json_each($2))
   `, [
-    convertArrayToPostgresString(tags),
-    convertArrayToPostgresString(photoIds),
+    JSON.stringify(tags),
+    JSON.stringify(photoIds),
   ]), 'addTagsToPhotos');
 
 export const deletePhotoRecipeGlobally = (recipe: string) =>
@@ -268,7 +295,7 @@ export const getPhotosMostRecentUpdate = async () =>
 export const getUniqueCameras = async () =>
   safelyQuery(() => sql`
     SELECT DISTINCT make||' '||model as camera, make, model,
-      COUNT(*),
+      COUNT(*) as count,
       MAX(updated_at) as last_modified
     FROM photos
     WHERE hidden IS NOT TRUE
@@ -290,7 +317,7 @@ export const getUniqueLenses = async () =>
   safelyQuery(() => sql`
     SELECT DISTINCT lens_make||' '||lens_model as lens,
       lens_make, lens_model,
-      COUNT(*),
+      COUNT(*) as count,
       MAX(updated_at) as last_modified
     FROM photos
     WHERE hidden IS NOT TRUE
@@ -307,22 +334,22 @@ export const getUniqueLenses = async () =>
   , 'getUniqueLenses');
 
 export const getUniqueTags = async (includeHidden?: boolean) =>
-  // FORK: also surface each tag's zh label by zipping tags + tags_zh (parallel
-  // unnest, NULL-padded). Facet tags carry their vocabulary zh; free-form
-  // subject tags carry the model-generated zh — so the sidebar/⌘K can localize
-  // EVERY tag on the 中 toggle, not just the controlled vocabulary.
+  // FORK: also surface each tag's zh label by zipping tags + tags_zh (index-
+  // matched json_extract, NULL when absent). Facet tags carry their vocabulary
+  // zh; free-form subject tags carry the model-generated zh — so the
+  // sidebar/⌘K can localize EVERY tag on the 中 toggle, not just the
+  // controlled vocabulary.
   safelyQuery(() => query(`
-    SELECT t.tag,
-      COUNT(*),
+    SELECT t.value as tag,
+      COUNT(*) as count,
       MAX(p.updated_at) as last_modified,
-      MAX(t.tag_zh) as tag_zh
-    FROM photos p
-      CROSS JOIN LATERAL unnest(
-        p.tags, COALESCE(p.tags_zh, '{}'::varchar[])
-      ) AS t(tag, tag_zh)
+      MAX(json_extract(
+        COALESCE(p.tags_zh, '[]'), '$[' || t.key || ']'
+      )) as tag_zh
+    FROM photos p, json_each(COALESCE(p.tags, '[]')) t
     ${includeHidden ? '' : 'WHERE p.hidden IS NOT TRUE'}
-    GROUP BY t.tag
-    ORDER BY t.tag ASC
+    GROUP BY t.value
+    ORDER BY tag ASC
   `).then(({ rows }): Tags =>
     rows.map(({ tag, count, last_modified, tag_zh }) => ({
       tag,
@@ -335,7 +362,7 @@ export const getUniqueTags = async (includeHidden?: boolean) =>
 export const getUniqueRecipes = async () =>
   safelyQuery(() => sql`
     SELECT DISTINCT recipe_title,
-      COUNT(*),
+      COUNT(*) as count,
       MAX(updated_at) as last_modified
     FROM photos
     WHERE hidden IS NOT TRUE AND recipe_title IS NOT NULL
@@ -352,8 +379,8 @@ export const getUniqueRecipes = async () =>
 export const getUniqueYears = async () =>
   safelyQuery(() => sql`
     SELECT
-      DISTINCT EXTRACT(YEAR FROM taken_at) AS year,
-      COUNT(*),
+      DISTINCT strftime('%Y', taken_at) AS year,
+      COUNT(*) as count,
       MAX(updated_at) as last_modified
     FROM photos
     WHERE hidden IS NOT TRUE
@@ -386,7 +413,7 @@ export const getPhotosNeedingRecipeTitleCount = async (
   photoIdToExclude?: string,
 ) =>
   safelyQuery(() => sql`
-    SELECT COUNT(*)
+    SELECT COUNT(*) as count
     FROM photos
     WHERE recipe_title IS NULL
     AND recipe_data=${data}
@@ -411,7 +438,7 @@ export const updateAllMatchingRecipeTitles = (
 export const getUniqueFilms = async () =>
   safelyQuery(() => sql`
     SELECT DISTINCT film,
-      COUNT(*),
+      COUNT(*) as count,
       MAX(updated_at) as last_modified
     FROM photos
     WHERE hidden IS NOT TRUE AND film IS NOT NULL
@@ -428,7 +455,7 @@ export const getUniqueFilms = async () =>
 export const getUniqueFocalLengths = async () =>
   safelyQuery(() => sql`
     SELECT DISTINCT focal_length,
-      COUNT(*),
+      COUNT(*) as count,
       MAX(updated_at) as last_modified
     FROM photos
     WHERE hidden IS NOT TRUE AND focal_length IS NOT NULL
@@ -453,7 +480,11 @@ const _getPhotos = async (
   } = {},
 ) => {
   const sql = [
-    `SELECT ${fields.map(field => `p.${field}`).join(', ')} FROM photos p`,
+    // 'COUNT' relied on Postgres's function-as-attribute quirk (`p.count` ==
+    // `count(p)`); SQLite needs the explicit aggregate + alias.
+    `SELECT ${fields
+      .map(field => field === 'COUNT' ? 'COUNT(*) as count' : `p.${field}`)
+      .join(', ')} FROM photos p`,
   ];
 
   const values = [] as (string | number)[];
@@ -597,7 +628,7 @@ export const getPhotosNearId = async (
 export const getPhotosMeta = (options: PhotoQueryOptions = {}) =>
   safelyQuery(async () => {
     let sql = `
-      SELECT COUNT(*),
+      SELECT COUNT(*) as count,
       MIN(p.taken_at_naive) as start, MAX(p.taken_at_naive) as end,
       MIN(p.created_at) as start_created_at, MAX(p.created_at) as end_created_at
       FROM photos p
@@ -671,7 +702,8 @@ const needsAiTextWhereClauses =
         switch (field) {
           case 'title': return `(title <> '') IS NOT TRUE`;
           case 'caption': return `(caption <> '') IS NOT TRUE`;
-          case 'tags': return `(tags IS NULL OR array_length(tags, 1) = 0)`;
+          case 'tags':
+            return `(tags IS NULL OR json_array_length(tags) = 0)`;
           case 'semantic': return `(semantic_description <> '') IS NOT TRUE`;
         }
       })
@@ -708,7 +740,7 @@ export const getPhotosInNeedOfUpdate = () =>
 export const getPhotosInNeedOfUpdateCount = () =>
   safelyQuery(
     () => query(`
-      SELECT COUNT(*) FROM photos
+      SELECT COUNT(*) as count FROM photos
       ${needsSyncWhereStatement}
     `,
     outdatedWhereValues,

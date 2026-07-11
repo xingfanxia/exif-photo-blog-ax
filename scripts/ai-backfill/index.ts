@@ -16,8 +16,8 @@
  * The provider Batch API (50% off) is a future spend optimization; the
  * idempotency contract above is what makes either path safe to re-run.
  */
-import { pool, query } from '@/platforms/postgres';
-import { convertArrayToPostgresString } from '@/db';
+import { query, closeDb } from '@/platforms/db';
+import { convertArrayToJson } from '@/db';
 import { runMigrations } from '@/db/migrate';
 import { computeInputHash, shouldSkipBackfill } from '@/photo/ai/backfill';
 import { generateAiImageQueries } from '@/photo/ai/server';
@@ -98,11 +98,11 @@ const backfillPhoto = async (
     if (ai.error) { throw new Error(ai.error); }
 
     // PLOG-15: persist the bilingual `_zh` siblings too (the worker dropped them
-    // before the bilingual era). CSV → Postgres array literal via the shared
-    // helper the photo insert uses (the typed `query` wrapper takes primitives).
-    const toPgArray = (csv?: string): string | null =>
+    // before the bilingual era). CSV → JSON array text via the shared helper
+    // the photo insert uses (the typed `query` wrapper takes primitives).
+    const toDbArray = (csv?: string): string | null =>
       csv
-        ? convertArrayToPostgresString(
+        ? convertArrayToJson(
           csv.split(',').map(s => s.trim()).filter(Boolean),
         )
         : null;
@@ -118,18 +118,18 @@ const backfillPhoto = async (
          tags_zh = COALESCE($9, tags_zh),
          metadata_status = 'done',
          input_hash = $10,
-         updated_at = CURRENT_TIMESTAMP
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = $1`,
       [
         row.id,
         ai.title ?? null,
         ai.caption ?? null,
-        toPgArray(ai.tags),
+        toDbArray(ai.tags),
         ai.semantic ?? null,
         ai.titleZh ?? null,
         ai.captionZh ?? null,
         ai.semanticZh ?? null,
-        toPgArray(ai.tagsZh),
+        toDbArray(ai.tagsZh),
         inputHash,
       ],
     );
@@ -138,7 +138,7 @@ const backfillPhoto = async (
     const message = e instanceof Error ? e.message : String(e);
     console.error(`Backfill failed for ${row.id}: ${message}`);
     await query(
-      `UPDATE photos SET metadata_status = 'failed' WHERE id = $1`,
+      'UPDATE photos SET metadata_status = \'failed\' WHERE id = $1',
       [row.id],
     ).catch(() => {});
     return 'failed';
@@ -146,14 +146,14 @@ const backfillPhoto = async (
 };
 
 (async () => {
-  if (!process.env.POSTGRES_URL) {
-    console.error('POSTGRES_URL is not set — load .env.local first.');
+  if (!process.env.TURSO_DATABASE_URL) {
+    console.error('TURSO_DATABASE_URL is not set — load .env.local first.');
     process.exit(1);
   }
   try {
     await runMigrations(); // ensure metadata_status / input_hash columns exist
     const { rows } = await query<PhotoBackfillRow>(
-      `SELECT id, url, metadata_status, input_hash FROM photos`,
+      'SELECT id, url, metadata_status, input_hash FROM photos',
     );
     if (rows.length === 0) {
       console.log('No photos to backfill (empty library).');
@@ -171,6 +171,6 @@ const backfillPhoto = async (
     console.error('Backfill worker failed:', e);
     process.exit(1);
   } finally {
-    await pool.end().catch(() => {});
+    closeDb();
   }
 })();

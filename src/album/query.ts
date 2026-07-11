@@ -1,41 +1,46 @@
+import { randomUUID } from 'crypto';
 import { safelyQuery } from '@/db/query';
-import { query, sql } from '@/platforms/postgres';
+import { query, sql } from '@/platforms/db';
 import { generateManyToManyValues } from '@/db';
 import { Album, Albums, parseAlbumFromDb } from '.';
 
 export const createAlbumsTable = () =>
   sql`
     CREATE TABLE IF NOT EXISTS albums (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      title VARCHAR(255) NOT NULL,
-      slug VARCHAR(255) UNIQUE NOT NULL,
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
       subhead TEXT,
       description TEXT,
-      location JSONB,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      location TEXT,
+      updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     )
   `;
 
 export const createAlbumPhotoTable = () =>
   sql`
     CREATE TABLE IF NOT EXISTS album_photo (
-      album_id uuid NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-      photo_id VARCHAR(8) NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
-      sort_order SMALLINT NOT NULL DEFAULT 0,
+      album_id TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+      photo_id TEXT NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (album_id, photo_id)
     )
   `;
 
-export const insertAlbum = (album: Omit<Album, 'id'>) =>
-  safelyQuery(() => sql`
+export const insertAlbum = (album: Omit<Album, 'id'>) => {
+  // SQLite has no gen_random_uuid(); generate the uuid at the boundary.
+  const id = randomUUID();
+  return safelyQuery(() => sql`
     INSERT INTO albums (
+      id,
       title,
       slug,
       subhead,
       description,
       location
     ) VALUES (
+      ${id},
       ${album.title},
       ${album.slug},
       ${album.subhead},
@@ -47,6 +52,7 @@ export const insertAlbum = (album: Omit<Album, 'id'>) =>
     RETURNING id
   `.then(({ rows }) => rows[0]?.id as string)
   , 'insertAlbum');
+};
 
 export const updateAlbum = (album: Album) =>
   safelyQuery(() => sql`
@@ -125,9 +131,10 @@ export const getAlbumTitlesForPhoto = (photoId: string) =>
 
 export const getTagsForAlbum = (albumId: string) =>
   safelyQuery(() => sql`
-    SELECT DISTINCT unnest(p.tags) as tag
+    SELECT DISTINCT t.value as tag
     FROM photos p
-    LEFT JOIN album_photo ap ON p.id = ap.photo_id
+    JOIN album_photo ap ON p.id = ap.photo_id
+    JOIN json_each(COALESCE(p.tags, '[]')) t
     WHERE album_id=${albumId}
   `.then(({ rows }) => rows.map(({ tag }) => tag))
   , 'getTagsForAlbum');

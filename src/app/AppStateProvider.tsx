@@ -133,7 +133,7 @@ export default function AppStateProvider({
     setUserEmailEager(getAuthEmailCookie());
     // FORK: sync the content-language toggle from its cookie on mount.
     const cookieLang = getCookie(CONTENT_LANGUAGE_COOKIE);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     if (cookieLang) { setContentLanguage(parseContentLanguage(cookieLang)); }
     // Capture backup timezone on client
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
