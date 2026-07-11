@@ -18,40 +18,33 @@ const CHARACTERS_TO_REMOVE = [',', '/'];
 const CHARACTERS_TO_REPLACE = ['+', '&', '|', ':', '_', ' '];
 
 // Raw normalization SQL, kept in lockstep with utility/string.ts parameterize.
-const normalizeSql = (value: string) =>
-  `REGEXP_REPLACE(
-    REGEXP_REPLACE(
-      LOWER(TRIM(${value})),
-      '[${CHARACTERS_TO_REMOVE.join('')}]', '', 'g'
-    ),
-    '[${CHARACTERS_TO_REPLACE.join('')}]', '-', 'g'
-  )`;
-
-// PLOG-4: expression indexes require every function in the expression to be
-// IMMUTABLE, but on Supabase's ICU collation LOWER() is only STABLE — so an
-// inline REGEXP_REPLACE(LOWER(TRIM(col))) index is rejected with "functions in
-// index expression must be marked IMMUTABLE". We wrap the normalization in an
-// explicitly-IMMUTABLE SQL function (created by the migration runner) and call
-// it from BOTH the WHERE filters and the expression indexes, so the planner's
-// expression-match can't silently miss. IMMUTABLE is a deliberate assertion:
-// the normalization is ASCII slug logic that must not track collation changes.
-export const PHOTO_NORMALIZE_FN = 'photo_normalize_field';
-export const PHOTO_NORMALIZE_FUNCTION_DDL =
-  `CREATE OR REPLACE FUNCTION ${PHOTO_NORMALIZE_FN}(value text)
-   RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
-     SELECT ${normalizeSql('value')}
-   $$`;
+// SQLite has no REGEXP_REPLACE, so the per-character regex classes unroll into
+// nested REPLACE calls — same per-character semantics, and (unlike the old
+// Postgres IMMUTABLE-function workaround) deterministic built-ins that SQLite
+// accepts directly in expression indexes (TURSO-1). Generated from the SAME
+// char arrays as the JS `parameterize`, so slug logic can't desync.
+const normalizeSql = (value: string) => {
+  let expression = `LOWER(TRIM(${value}))`;
+  for (const c of CHARACTERS_TO_REMOVE) {
+    expression = `REPLACE(${expression}, '${c}', '')`;
+  }
+  for (const c of CHARACTERS_TO_REPLACE) {
+    expression = `REPLACE(${expression}, '${c}', '-')`;
+  }
+  return expression;
+};
 
 export const parameterizeForDb = (field: string) =>
-  `${PHOTO_NORMALIZE_FN}(${field})`;
+  normalizeSql(field);
 
-// Single source of truth for the full-text search expression, shared by the
-// ILIKE query (below) and the PLOG-4 pg_trgm GIN index so they can't desync.
-// COALESCE + `||` are IMMUTABLE (CONCAT is only STABLE and would be rejected
-// by the expression index); the COALESCE replicates CONCAT's NULL-as-empty.
+// Single source of truth for the full-text search expression. Searched with
+// LOWER(…) LIKE against a lowercased pattern (SQLite has no ILIKE; its LIKE
+// is only ASCII-case-insensitive, so the explicit LOWER keeps behavior
+// obvious). At this catalog's scale a sequential scan is sub-millisecond —
+// the old pg_trgm GIN index has no SQLite equivalent and isn't needed.
 export const PHOTO_SEARCH_EXPRESSION =
-  `(COALESCE(title, '') || ' ' || COALESCE(caption, '') || ` +
-  `' ' || COALESCE(semantic_description, ''))`;
+  '(COALESCE(title, \'\') || \' \' || COALESCE(caption, \'\') || ' +
+  '\' \' || COALESCE(semantic_description, \'\'))';
 
 export type PhotoQueryOptions = {
   sortBy?: SortBy
@@ -133,22 +126,27 @@ export const getWheresFromOptions = (
   }
   if (query) {
     wheres.push(
-      `${PHOTO_SEARCH_EXPRESSION} ILIKE ${pb.add(`%${query.toLocaleLowerCase()}%`)}`,
+      `LOWER(${PHOTO_SEARCH_EXPRESSION}) LIKE ${pb.add(`%${query.toLocaleLowerCase()}%`)}`,
     );
   }
   if (maximumAspectRatio) {
     wheres.push(`aspect_ratio <= ${pb.add(maximumAspectRatio)}`);
   }
   if (recent) {
+    // Timestamps are stored as ISO-8601 UTC text ('…T…Z'), so strftime with
+    // the matching format yields lexicographically comparable strings.
     // Newest upload must be within past 2 weeks
     // eslint-disable-next-line max-len
-    wheres.push('(SELECT MAX(created_at) FROM photos) >= (now() - INTERVAL \'14 days\')');
+    wheres.push('(SELECT MAX(created_at) FROM photos) >= strftime(\'%Y-%m-%dT%H:%M:%fZ\', \'now\', \'-14 days\')');
     // Selects must be within 1 week of newest upload
     // eslint-disable-next-line max-len
-    wheres.push('created_at >= (SELECT MAX(created_at) - INTERVAL \'7 days\' FROM photos)');
+    wheres.push('created_at >= (SELECT strftime(\'%Y-%m-%dT%H:%M:%fZ\', MAX(created_at), \'-7 days\') FROM photos)');
   }
   if (year) {
-    wheres.push(`EXTRACT(YEAR FROM taken_at) = ${pb.add(year)}`);
+    // CASTs on both sides: strftime returns TEXT and SQLite comparisons are
+    // type-strict, so an INTEGER (or TEXT) bound param must be normalized.
+    // eslint-disable-next-line max-len
+    wheres.push(`CAST(strftime('%Y', taken_at) AS INTEGER) = CAST(${pb.add(year)} AS INTEGER)`);
   }
   if (camera?.make) {
     wheres.push(`${parameterizeForDb('make')}=${pb.add(parameterize(camera.make))}`);
@@ -168,9 +166,10 @@ export const getWheresFromOptions = (
     wheres.push(`album_id=${pb.add(album.id)}`);
   }
   if (tag) {
-    // `tags @> ARRAY[$n]` (containment) is GIN-indexable via array_ops;
-    // the equivalent `$n = ANY(tags)` is NOT and would seq-scan (PLOG-4 N1).
-    wheres.push(`tags @> ARRAY[${pb.add(tag)}]::varchar[]`);
+    // Tags live as a JSON text array; membership via json_each. Seq scan —
+    // fine at this catalog's scale (no GIN equivalent in SQLite).
+    // eslint-disable-next-line max-len
+    wheres.push(`EXISTS (SELECT 1 FROM json_each(COALESCE(tags, '[]')) WHERE json_each.value = ${pb.add(tag)})`);
   }
   if (film) {
     wheres.push(`film=${pb.add(film)}`);
@@ -182,7 +181,8 @@ export const getWheresFromOptions = (
     wheres.push(`focal_length=${pb.add(focal)}`);
   }
   if (photoIds && photoIds.length > 0) {
-    wheres.push(`id=ANY(${pb.add(convertArrayToPostgresString(photoIds) ?? '')})`);
+    // eslint-disable-next-line max-len
+    wheres.push(`id IN (SELECT value FROM json_each(${pb.add(JSON.stringify(photoIds))}))`);
   }
 
   return {
@@ -246,16 +246,9 @@ export const getLimitAndOffsetFromOptions = (
   };
 };
 
-export const convertArrayToPostgresString = (
-  array?: string[],
-  type: 'braces' | 'brackets' | 'parentheses' = 'braces', 
-) => array
-  ? type === 'braces'
-    ? `{${array.join(',')}}`
-    : type === 'brackets'
-      ? `[${array.map(i => `'${i}'`).join(',')}]`
-      : `(${array.map(i => `'${i}'`).join(',')})`
-  : null;
+// Arrays (formerly Postgres `varchar[]`) are stored as JSON text (TURSO-1).
+export const convertArrayToJson = (array?: string[]) =>
+  array ? JSON.stringify(array) : null;
 
 export const generateManyToManyValues = (idsA: string[], idsB: string[]) => {
   const pairs: string[][] = [];

@@ -68,20 +68,20 @@ const getImageTextArgs = (
 ) | undefined => {
   const visionModel = getVisionModel(model);
   return visionModel ? {
-  model: visionModel,
-  ...REASONING_PROVIDER_OPTIONS,
-  messages: [{
-    'role': 'user',
-    'content': [
-      {
-        'type': 'text',
-        'text': query,
-      }, {
-        'type': 'image',
-        'image': removeBase64Prefix(imageBase64),
-      },
-    ],
-  }],
+    model: visionModel,
+    ...REASONING_PROVIDER_OPTIONS,
+    messages: [{
+      'role': 'user',
+      'content': [
+        {
+          'type': 'text',
+          'text': query,
+        }, {
+          'type': 'image',
+          'image': removeBase64Prefix(imageBase64),
+        },
+      ],
+    }],
   } : undefined;
 };
 

@@ -43,7 +43,6 @@ import { IoLink } from 'react-icons/io5';
 export default function AdminAppConfigurationClient({
   // Storage
   hasDatabase,
-  isPostgresSslEnabled,
   hasRedisStorage,
   hasStorageProvider,
   hasVercelBlobStorage,
@@ -279,22 +278,18 @@ export default function AdminAppConfigurationClient({
               connection: { provider: 'Database', error: databaseError},
             })}
             {hasDatabase
-              ? renderSubStatus(
-                'checked',
-                // eslint-disable-next-line max-len
-                `Postgres: connected${!isPostgresSslEnabled ? ' (SSL disabled)' : ''}`,
-              )
+              ? renderSubStatus('checked', 'Turso: connected')
               : renderSubStatus('missing', <>
-                Postgres:
+                Turso:
                 {' '}
                 <AdminLink
-                  href="https://vercel.com/docs/postgres"
+                  href="https://turso.tech"
                   externalIcon
                 >
                   create database
                 </AdminLink>
                 {' '}
-                and connect to project
+                and set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN
               </>)}
           </ChecklistRow>
           <ChecklistRow

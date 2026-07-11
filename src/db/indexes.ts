@@ -1,22 +1,23 @@
-import { parameterizeForDb, PHOTO_SEARCH_EXPRESSION } from '@/db';
+import { parameterizeForDb } from '@/db';
 
-// PLOG-4: indexes the query builder's predicates require. Each is its own
-// `CREATE INDEX IF NOT EXISTS` statement applied via the migration runner —
-// NOT stuffed into the single-statement `createPhotosTable`. All idempotent.
+// PLOG-4 (SQLite dialect since TURSO-1): indexes the query builder's
+// predicates require. Each is its own `CREATE INDEX IF NOT EXISTS` statement
+// applied via the migration runner — NOT stuffed into the single-statement
+// `createPhotosTable`. All idempotent.
 //
-// Expression indexes (make/model/lens, search) are generated from the SAME
-// `parameterizeForDb` / `PHOTO_SEARCH_EXPRESSION` the WHERE clauses use, so the
-// planner's expression-match can't silently miss (a one-function-off
-// expression index is dead weight).
+// Expression indexes (make/model/lens) are generated from the SAME
+// `parameterizeForDb` the WHERE clauses use, so the planner's expression-match
+// can't silently miss (a one-function-off expression index is dead weight).
+//
+// Dropped in the Turso migration (no SQLite equivalent, and at this catalog's
+// scale a seq scan is sub-millisecond anyway):
+//  - the GIN array index on tags (tag filter now walks json_each)
+//  - the pg_trgm GIN search index (search now LOWER(…) LIKE)
 
 export interface DbIndex {
   name: string;
   ddl: string;
 }
-
-// pg_trgm powers the title/caption/semantic ILIKE search via a GIN index.
-export const PG_TRGM_EXTENSION_DDL =
-  'CREATE EXTENSION IF NOT EXISTS pg_trgm';
 
 const index = (name: string, body: string): DbIndex => ({
   name,
@@ -42,8 +43,6 @@ export const PHOTO_INDEXES: DbIndex[] = [
     'photos (taken_at DESC) ' +
       'WHERE hidden IS NOT TRUE AND exclude_from_feeds IS NOT TRUE',
   ),
-  // tag filter: `tags @> ARRAY[$1]` (GIN array_ops containment).
-  index('idx_photos_tags_gin', 'photos USING GIN (tags)'),
   // GROUP BY aggregation columns (camera/film/recipe/focal meta counts).
   index('idx_photos_make', 'photos (make)'),
   index('idx_photos_model', 'photos (model)'),
@@ -60,10 +59,5 @@ export const PHOTO_INDEXES: DbIndex[] = [
   index(
     'idx_photos_lens_model_param',
     `photos ((${parameterizeForDb('lens_model')}))`,
-  ),
-  // Full-text search: trigram GIN over the shared search expression.
-  index(
-    'idx_photos_search_trgm',
-    `photos USING GIN ((${PHOTO_SEARCH_EXPRESSION}) gin_trgm_ops)`,
   ),
 ];

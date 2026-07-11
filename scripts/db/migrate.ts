@@ -18,8 +18,8 @@
 import { runMigrations } from '@/db/migrate';
 
 (async () => {
-  if (!process.env.POSTGRES_URL) {
-    console.error('POSTGRES_URL is not set — load .env.local first.');
+  if (!process.env.TURSO_DATABASE_URL) {
+    console.error('TURSO_DATABASE_URL is not set — load .env.local first.');
     process.exit(1);
   }
   try {

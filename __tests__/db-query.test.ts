@@ -43,9 +43,10 @@ describe('getWheresFromOptions $N binding contract (PLOG-13)', () => {
     });
   }
 
-  it('tag filter uses the GIN-friendly containment form', () => {
-    expect(getWheresFromOptions({ tag: 'fog' }).wheres)
-      .toMatch(/tags @> ARRAY\[\$1\]/);
+  it('tag filter uses the json_each membership form (TURSO-1)', () => {
+    const { wheres } = getWheresFromOptions({ tag: 'fog' });
+    expect(wheres).toMatch(/json_each\(COALESCE\(tags, '\[\]'\)\)/);
+    expect(wheres).toMatch(/json_each\.value = \$1/);
   });
   it('the always-present hidden predicate has no placeholder', () => {
     expect(getWheresFromOptions({}).wheres).toBe('WHERE hidden IS NOT TRUE');

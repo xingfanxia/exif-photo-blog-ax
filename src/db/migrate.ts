@@ -1,7 +1,6 @@
-import { pool, query } from '@/platforms/postgres';
+import { query } from '@/platforms/db';
 import { MIGRATIONS } from '@/db/migration';
-import { PHOTO_INDEXES, PG_TRGM_EXTENSION_DDL } from '@/db/indexes';
-import { PHOTO_NORMALIZE_FUNCTION_DDL } from '@/db';
+import { PHOTO_INDEXES } from '@/db/indexes';
 import { createPhotosTable } from '@/photo/query';
 import { createAlbumsTable, createAlbumPhotoTable } from '@/album/query';
 import { createAboutTable } from '@/about/query';
@@ -14,25 +13,19 @@ import { createAboutTable } from '@/about/query';
 //
 // Safe to run repeatedly:
 //  - base-table DDL is `CREATE TABLE IF NOT EXISTS`;
-//  - every MIGRATIONS[] entry is individually idempotent
-//    (`ADD COLUMN IF NOT EXISTS` / guarded `DO` blocks / `DROP … IF EXISTS`);
+//  - every MIGRATIONS[] entry must be individually idempotent;
 //  - applied labels are recorded and skipped on subsequent runs.
+//
+// Concurrency (TURSO-1): the Postgres advisory lock is gone — SQLite/libSQL
+// serializes writers at the database level, and every step is idempotent, so
+// two racing runners converge on the same end state.
 
 const SCHEMA_MIGRATIONS_TABLE_DDL = `
   CREATE TABLE IF NOT EXISTS schema_migrations (
     label TEXT PRIMARY KEY,
-    applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   )
 `;
-
-// Arbitrary stable key so two runner invocations (e.g. parallel deploy
-// instances) can't both read an empty ledger and double-apply DDL. The lock
-// is held on ONE dedicated client for the whole run; the migration DDL itself
-// still uses the pooled helpers — safe because the lock serializes runners so
-// only one proceeds at a time. NOTE: labels in `schema_migrations` are
-// immutable identifiers — never edit a shipped MIGRATIONS[] label or it will
-// re-run under a new identity.
-const MIGRATION_ADVISORY_LOCK_KEY = 4_771_001;
 
 export interface MigrationRunResult {
   applied: string[]; // labels applied this run
@@ -51,73 +44,51 @@ export const ensureBaseTables = async (): Promise<void> => {
 };
 
 export const runMigrations = async (): Promise<MigrationRunResult> => {
-  // Hold a session-level advisory lock on a dedicated client for the whole
-  // run so concurrent invocations serialize (see lock-key note above).
-  const client = await pool.connect();
-  try {
-    await client.query('SELECT pg_advisory_lock($1)', [
-      MIGRATION_ADVISORY_LOCK_KEY,
-    ]);
+  await ensureBaseTables();
+  await query(SCHEMA_MIGRATIONS_TABLE_DDL);
 
-    await ensureBaseTables();
-    await query(SCHEMA_MIGRATIONS_TABLE_DDL);
+  const { rows } = await query<{ label: string }>(
+    'SELECT label FROM schema_migrations ORDER BY label',
+  );
+  const alreadyApplied = new Set(rows.map(({ label }) => label));
 
-    const { rows } = await query<{ label: string }>(
-      'SELECT label FROM schema_migrations ORDER BY label',
+  const applied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const migration of MIGRATIONS) {
+    if (alreadyApplied.has(migration.label)) {
+      skipped.push(migration.label);
+      continue;
+    }
+    console.log(`Applying migration ${migration.label} ...`);
+    await migration.run();
+    await query(
+      `INSERT INTO schema_migrations (label) VALUES ($1)
+       ON CONFLICT (label) DO NOTHING`,
+      [migration.label],
     );
-    const alreadyApplied = new Set(rows.map(({ label }) => label));
-
-    const applied: string[] = [];
-    const skipped: string[] = [];
-
-    for (const migration of MIGRATIONS) {
-      if (alreadyApplied.has(migration.label)) {
-        skipped.push(migration.label);
-        continue;
-      }
-      console.log(`Applying migration ${migration.label} ...`);
-      await migration.run();
-      await query(
-        `INSERT INTO schema_migrations (label) VALUES ($1)
-         ON CONFLICT (label) DO NOTHING`,
-        [migration.label],
-      );
-      applied.push(migration.label);
-    }
-
-    // Extensions, the IMMUTABLE normalizer function, then indexes (PLOG-4):
-    // applied after columns exist; all idempotent. The function must precede
-    // the expression indexes that call it. Each index is isolated so one
-    // failure can't prevent the rest (esp. the trgm search index) being
-    // created, but any failure still surfaces loudly via an aggregate throw.
-    await query(PG_TRGM_EXTENSION_DDL);
-    await query(PHOTO_NORMALIZE_FUNCTION_DDL);
-    const indexFailures: string[] = [];
-    for (const idx of PHOTO_INDEXES) {
-      try {
-        await query(idx.ddl);
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        console.error(`Index ${idx.name} failed: ${message}`, { error: e });
-        indexFailures.push(`${idx.name}: ${message}`);
-      }
-    }
-    if (indexFailures.length > 0) {
-      throw new Error(
-        `Index creation failed for ${indexFailures.length} index(es): ` +
-        indexFailures.join('; '),
-      );
-    }
-
-    return { applied, skipped, indexes: PHOTO_INDEXES.map(i => i.name) };
-  } finally {
-    try {
-      await client.query('SELECT pg_advisory_unlock($1)', [
-        MIGRATION_ADVISORY_LOCK_KEY,
-      ]);
-    } catch {
-      // Lock is released on connection release regardless; ignore.
-    }
-    client.release();
+    applied.push(migration.label);
   }
+
+  // Indexes (PLOG-4): applied after columns exist; all idempotent. Each index
+  // is isolated so one failure can't prevent the rest being created, but any
+  // failure still surfaces loudly via an aggregate throw.
+  const indexFailures: string[] = [];
+  for (const idx of PHOTO_INDEXES) {
+    try {
+      await query(idx.ddl);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error(`Index ${idx.name} failed: ${message}`, { error: e });
+      indexFailures.push(`${idx.name}: ${message}`);
+    }
+  }
+  if (indexFailures.length > 0) {
+    throw new Error(
+      `Index creation failed for ${indexFailures.length} index(es): ` +
+      indexFailures.join('; '),
+    );
+  }
+
+  return { applied, skipped, indexes: PHOTO_INDEXES.map(i => i.name) };
 };

@@ -1,18 +1,13 @@
 /* eslint-disable max-len */
 import { runMigrations } from '@/db/migrate';
-import { query, pool } from '@/platforms/postgres';
+import { query } from '@/platforms/db';
 import { MIGRATIONS } from '@/db/migration';
 import { createPhotosTable } from '@/photo/query';
 import { createAlbumsTable, createAlbumPhotoTable } from '@/album/query';
 import { createAboutTable } from '@/about/query';
 
-const mockClient = {
-  query: jest.fn().mockResolvedValue({ rows: [] }),
-  release: jest.fn(),
-};
-jest.mock('@/platforms/postgres', () => ({
+jest.mock('@/platforms/db', () => ({
   query: jest.fn(),
-  pool: { connect: jest.fn() },
 }));
 jest.mock('@/photo/query', () => ({ createPhotosTable: jest.fn() }));
 jest.mock('@/album/query', () => ({
@@ -44,9 +39,6 @@ const wireQuery = (appliedLabels: string[]) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockClient.query.mockResolvedValue({ rows: [] });
-  mockClient.release.mockReset();
-  (pool.connect as jest.Mock).mockResolvedValue(mockClient);
 });
 
 describe('runMigrations (PLOG-3 ordered idempotent runner)', () => {
@@ -92,26 +84,22 @@ describe('runMigrations (PLOG-3 ordered idempotent runner)', () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it('ensures pg_trgm + immutable fn + all indexes after migrating (PLOG-4)',
+  it('ensures all indexes after migrating (PLOG-4, SQLite dialect)',
     async () => {
       wireQuery([]);
       const result = await runMigrations();
-      expect(result.indexes.length).toBeGreaterThanOrEqual(13);
+      expect(result.indexes.length).toBeGreaterThanOrEqual(12);
       const ran = (re: RegExp) =>
         mockQuery.mock.calls.some(([t]) => re.test(t));
-      expect(ran(/CREATE EXTENSION IF NOT EXISTS pg_trgm/i)).toBe(true);
-      // IMMUTABLE normalizer must be created before the expression indexes
-      expect(ran(/CREATE OR REPLACE FUNCTION photo_normalize_field/i))
+      // expression index inlines the normalization (nested REPLACE over
+      // LOWER(TRIM(…))) — no Postgres IMMUTABLE function wrapper anymore
+      expect(ran(/idx_photos_make_param.*REPLACE\(.*LOWER\(TRIM\(make\)\)/is))
         .toBe(true);
-      expect(ran(/idx_photos_tags_gin .*USING GIN \(tags\)/is)).toBe(true);
-      // trgm search index over the COALESCE (immutable) expression
-      expect(ran(/idx_photos_search_trgm.*COALESCE.*gin_trgm_ops/is))
-        .toBe(true);
-      // expression index calls the IMMUTABLE function (not inline LOWER)
-      expect(ran(/idx_photos_make_param.*photo_normalize_field/is)).toBe(true);
       // partial feed index bakes in the hidden predicate
       expect(ran(/idx_photos_feed_taken_at.*WHERE hidden IS NOT TRUE/is))
         .toBe(true);
+      // Postgres-only DDL must be gone
+      expect(ran(/pg_trgm|USING GIN|photo_normalize_field/i)).toBe(false);
     });
 
   it('throws loudly (aggregate) if any index fails, after attempting all',
@@ -122,39 +110,16 @@ describe('runMigrations (PLOG-3 ordered idempotent runner)', () => {
         if (/SELECT label FROM schema_migrations/i.test(text)) {
           return Promise.resolve({ rows: [] });
         }
-        if (/idx_photos_tags_gin/i.test(text)) {
-          return Promise.reject(new Error('boom-tags'));
+        if (/idx_photos_feed_taken_at/i.test(text)) {
+          return Promise.reject(new Error('boom-feed'));
         }
         return Promise.resolve({ rows: [] });
       });
       await expect(runMigrations()).rejects.toThrow(/Index creation failed/i);
-      // the trgm search index was still attempted despite the earlier failure
+      // later indexes were still attempted despite the earlier failure
       expect(mockQuery.mock.calls.some(([t]) =>
-        /idx_photos_search_trgm/i.test(t))).toBe(true);
+        /idx_photos_lens_model_param/i.test(t))).toBe(true);
     });
-
-  it('serializes runners via an advisory lock and always releases it', async () => {
-    wireQuery([]);
-    await runMigrations();
-    expect(pool.connect).toHaveBeenCalledTimes(1);
-    expect(mockClient.query).toHaveBeenCalledWith(
-      'SELECT pg_advisory_lock($1)', expect.any(Array),
-    );
-    expect(mockClient.query).toHaveBeenCalledWith(
-      'SELECT pg_advisory_unlock($1)', expect.any(Array),
-    );
-    expect(mockClient.release).toHaveBeenCalledTimes(1);
-  });
-
-  it('releases the lock/client even when a migration throws', async () => {
-    wireQuery([]);
-    (MIGRATIONS[1].run as jest.Mock).mockRejectedValueOnce(new Error('boom'));
-    await expect(runMigrations()).rejects.toThrow('boom');
-    expect(mockClient.query).toHaveBeenCalledWith(
-      'SELECT pg_advisory_unlock($1)', expect.any(Array),
-    );
-    expect(mockClient.release).toHaveBeenCalledTimes(1);
-  });
 
   it('applies only the unrecorded migrations (partial state)', async () => {
     wireQuery(['01: A']);

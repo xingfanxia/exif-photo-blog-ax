@@ -1,4 +1,4 @@
-import { sql } from '@/platforms/postgres';
+import { sql } from '@/platforms/db';
 import { About, AboutInsert } from '.';
 import { safelyQuery } from '@/db/query';
 import camelcaseKeys from 'camelcase-keys';
@@ -8,14 +8,14 @@ const ABOUT_ID = 1;
 export const createAboutTable = () =>
   sql`
     CREATE TABLE IF NOT EXISTS about (
-      id SERIAL PRIMARY KEY,
-      title VARCHAR(255),
+      id INTEGER PRIMARY KEY,
+      title TEXT,
       subhead TEXT,
       description TEXT,
-      photo_id_avatar VARCHAR(8) REFERENCES photos(id),
-      photo_id_hero VARCHAR(8) REFERENCES photos(id),
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      photo_id_avatar TEXT REFERENCES photos(id),
+      photo_id_hero TEXT REFERENCES photos(id),
+      updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     )
   `;
 
@@ -46,7 +46,7 @@ export const upsertAbout = (about: AboutInsert) =>
       description = EXCLUDED.description,
       photo_id_avatar = EXCLUDED.photo_id_avatar,
       photo_id_hero = EXCLUDED.photo_id_hero,
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     RETURNING id
   `.then(({ rows }) => rows[0]?.id as number)
   , 'insertAbout');
