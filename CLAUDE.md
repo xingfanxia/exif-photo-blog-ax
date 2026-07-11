@@ -48,16 +48,22 @@ git merge sambecker/main
 - `jest.config.ts`, `package.json`, `src/platforms/redis.ts` — diverged in
   PLOG-1 (honest test signal). See `UPSTREAM.md`.
 - `vercel.json` — AX-only addition (region pin `hnd1`, Tokyo; co-located with
-  the Supabase `ap-northeast-1` DB). Additive, no upstream equivalent.
+  the Turso `aws-ap-northeast-1` DB). Additive, no upstream equivalent.
+- **The entire DB layer** — diverged in TURSO-1 (2026-07-11): the engine is
+  **Turso libSQL (SQLite)**, upstream is Postgres. `src/platforms/db.ts`
+  replaces `postgres.ts`; every query file is SQLite-dialect. Upstream changes
+  to `src/photo/query.ts`, `src/db/*`, `src/album/query.ts`,
+  `src/about/query.ts` must be **re-dialected** on merge — full conversion
+  table in `UPSTREAM.md` → TURSO-1.
 
 ## Module map — `src/platforms/`
 
 Two distinct kinds of module live here; do not confuse them:
 
-- **Infra clients** (swappable backends / external services): `postgres.ts`,
-  `redis.ts`, `rate-limit.ts`, `storage/` (4-backend adapter), `vercel.ts`,
-  `github.ts`, `openai.ts` (→ `ai.ts` in PLOG-9), `next-image.ts`,
-  `google-places.ts`.
+- **Infra clients** (swappable backends / external services): `db.ts` (Turso
+  libSQL — replaced `postgres.ts` in TURSO-1), `redis.ts`, `rate-limit.ts`,
+  `storage/` (4-backend adapter), `vercel.ts`, `github.ts`, `ai.ts`
+  (provider-agnostic, PLOG-9), `next-image.ts`, `google-places.ts`.
 - **Camera/EXIF decoders** (per-vendor makernote parsing): `apple.ts`,
   `fujifilm/`, `nikon/`, `sony.ts`, `google-pixel.ts`. These are the dormant,
   hard-won upstream value (heic/raw/orientation) — never rewrite them.
@@ -68,10 +74,14 @@ Two distinct kinds of module live here; do not confuse them:
   module. The image loader slots *in front* of it (PLOG-6), never edits it.
 - **Per-domain sibling taxonomy** (`photo/tag/album/film/camera/lens/recipe/
   focal/year`) — most agent-legible convention. New taxonomy = new sibling dir.
-- **Raw `pg` PG-dialect SQL** — an asset (no ORM). Only *add* Zod row-parsing at
-  the DB→domain boundary (PLOG-11), never swap the engine. The relational
-  queries (`ANY(tags)`, ILIKE, `EXTRACT`, `INTERVAL`, JOINs, GROUP BY) rule out
-  Redis/Turso as the primary store; Redis is cache/rate-limit only.
+- **Raw SQL, no ORM** — still an asset. Since TURSO-1 the dialect is
+  **SQLite (Turso libSQL)**: JSON-text arrays via `json_each`, strftime dates,
+  `LOWER(…) LIKE`. Zod row-parsing at the DB→domain boundary stays (PLOG-11).
+  Storage conventions (ISO-text timestamps, JSON arrays, 0/1 booleans) are
+  enforced by `src/platforms/db.ts` — see `UPSTREAM.md` → TURSO-1. (The old
+  "Turso ruled out" verdict assumed keeping the PG dialect untouched; AX chose
+  the dialect migration on 2026-07-11 to drop the Supabase bill.) Redis is
+  still cache/rate-limit only.
 - **The photo grid is deliberately NOT de-cliented.** Its client-component
   bundle is accepted; the win is gating the *admin* subtree (PLOG-14), not the
   grid.
@@ -79,7 +89,11 @@ Two distinct kinds of module live here; do not confuse them:
 ## DB migration mechanism (caveat)
 
 - `MIGRATIONS[]` in `src/db/migration.ts` is the ordered source of truth (labels
-  are **dynamic** — never hardcode a label number).
+  are **dynamic** — never hardcode a label number). Since TURSO-1 it starts
+  **empty**: the Turso DB was created fresh from the full base DDL (historical
+  Postgres migrations 01–12 folded in). New entries use SQLite `ALTER TABLE` —
+  there is no `ADD COLUMN IF NOT EXISTS`; the `schema_migrations` ledger is
+  what makes re-runs safe.
 - `createPhotosTable` is one `sql` tagged-template — it can't hold
   `CREATE TABLE + N CREATE INDEX`. Indexes/columns are applied by the explicit
   ordered runner (PLOG-3), each as its own statement. JIT-DDL-from-read-errors
